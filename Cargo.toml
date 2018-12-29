@@ -1,0 +1,7 @@
+[package]
+name = "aristeia"
+version = "0.1.0"
+authors = ["Brendan Cox <brendancox21@gmail.com>"]
+
+[dependencies]
+rand = "0.6"
