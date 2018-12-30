@@ -14,13 +14,14 @@ pub fn mutate_some_agents<Gene, IndexFunction, Data>(
     rate: f64,
     data: &Data,
     get_score_index: &'static IndexFunction,
-    threads: usize) -> Population<Gene>
-  where Standard: Distribution<Gene>,
-        Gene: Clone + PartialEq + Hash + Send + 'static,
-        IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
-        Data: Clone + Send + 'static
-        {
-
+    threads: usize
+) -> Population<Gene>
+where
+Standard: Distribution<Gene>,
+Gene: Clone + Hash + Send + 'static,
+IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
+Data: Clone + Send + 'static
+{
     let groups = arrange_agents_into_groups(
         get_random_subset(population.get_agents().clone(), rate),
         threads
@@ -58,9 +59,9 @@ fn get_mutated_agents<Gene, IndexFunction, Data>(
     get_score_index: IndexFunction
 ) -> Vec<(isize, Agent<Gene>)>
 where Standard: Distribution<Gene>,
-Gene: Clone + PartialEq + Hash + Send + 'static,
-IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static
- {
+Gene: Clone + Hash,
+IndexFunction: Fn(&Agent<Gene>, &Data) -> isize
+{
     let mut rng = rand::thread_rng();
     let mut children = Vec::new();
     for mut agent in agents {
@@ -78,12 +79,11 @@ pub fn mate_some_agents<Gene, IndexFunction, Data>(
     get_score_index: &'static IndexFunction,
     threads: usize
     ) -> Population<Gene>
- where Standard: Distribution<Gene>, 
- Gene: Clone + PartialEq + Hash + Send + 'static, 
+ where
+ Gene: Clone + Hash + Send + 'static, 
  IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
  Data: Clone + Send + 'static
-   {
-
+{
     let groups = arrange_pairs_into_groups(
         create_random_pairs(
             get_random_subset(population.get_agents().clone(), rate / 2.0),
@@ -124,12 +124,11 @@ fn create_children<Gene, IndexFunction, Data>(
     pairs: Vec<(Agent<Gene>, Agent<Gene>)>,
     data: &Data,
     get_score_index: &'static IndexFunction
-    ) -> Vec<(isize, Agent<Gene>)>
- where Standard: Distribution<Gene>, 
- Gene: Clone + PartialEq + Hash + Send + 'static, 
- IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
- Data: Clone + Send 
-  {
+) -> Vec<(isize, Agent<Gene>)>
+where 
+Gene: Clone + Hash,
+IndexFunction: Fn(&Agent<Gene>, &Data) -> isize
+{
     let mut rng = rand::thread_rng();
     let mut children = Vec::new();
     for (parent_one, parent_two) in pairs {
@@ -164,10 +163,10 @@ where Gene: Clone
 fn arrange_pairs_into_groups<Gene>(
     pairs: Vec<(Agent<Gene>, Agent<Gene>)>,
     threads: usize
-    ) -> Vec<Vec<(Agent<Gene>, Agent<Gene>)>>
-    where
-    Gene: Clone
-    {
+) -> Vec<Vec<(Agent<Gene>, Agent<Gene>)>>
+where
+Gene: Clone
+{
     let mut groups = vec![Vec::new(); threads];
     let mut count = 0;
     for pair in pairs {
@@ -232,8 +231,8 @@ pub fn mate_alpha_agents<Gene, IndexFunction, Data>(
     get_score_index: &'static IndexFunction,
     threads: usize
 ) -> Population<Gene>
- where Standard: Distribution<Gene>, 
- Gene: Clone + PartialEq + Hash + Send + 'static, 
+ where 
+ Gene: Clone + Hash + Send + 'static, 
  IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
  Data: Clone + Send + 'static
    {
@@ -282,8 +281,11 @@ pub fn mate_alpha_agents<Gene, IndexFunction, Data>(
     population
 }
 
-pub fn cull_lowest_agents<Gene>(mut population: Population<Gene>, rate: f64) -> Population<Gene>
- where Gene: Clone + PartialEq + Hash, Standard: Distribution<Gene> {
+pub fn cull_lowest_agents<Gene>(
+    mut population: Population<Gene>,
+    rate: f64
+) -> Population<Gene>
+{
     let keys: Vec<isize> = population.get_agents().keys().map(|k| *k).collect();
     let cull_number = rate_to_number(keys.len(), rate);
     if cull_number >= keys.len() {

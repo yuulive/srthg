@@ -7,18 +7,14 @@ use rand::{
 };
 
 
-pub struct Population <Gene> where Gene: Clone {
+pub struct Population <Gene> {
     agents: BTreeMap<isize, Agent<Gene>>,
     register: HashSet<u64>,
     unique_agents: bool,
 
 }
 
-impl <Gene> Population <Gene>
-where 
-Standard: Distribution<Gene>,
-Gene: Clone + PartialEq + Hash
-{
+impl <Gene> Population <Gene>{
 
     pub fn new_empty(unique: bool) -> Self {
         Self {
@@ -34,32 +30,34 @@ Gene: Clone + PartialEq + Hash
         unique: bool,
         data: &Data,
         get_score_index: &'static IndexFunction
-        ) -> Population<Gene> 
-        where IndexFunction: Fn(&Agent<Gene>, &Data) -> isize 
-        {
+    ) -> Population<Gene> 
+    where
+    IndexFunction: Fn(&Agent<Gene>, &Data) -> isize,
+    Standard: Distribution<Gene>,
+    Gene: Hash
+    {
+        let mut population = Population::new_empty(unique);
+        for _ in 0..start_size {
+            let agent = Agent::new(number_of_genes);
+            if population.will_accept(&agent) {
+                let mut score = get_score_index(&agent, &data);
 
-            let mut population = Population::new_empty(unique);
-            for _ in 0..start_size {
-                let agent = Agent::new(number_of_genes);
-                if population.will_accept(&agent) {
-                    let mut score = get_score_index(&agent, &data);
-
-                    loop {
-                        if score == 0 {
-                            break;
-                        }
-                        if population.contains_score(score) {
-                            score -= 1;
-                        } else {
-                            break;
-                        }
+                loop {
+                    if score == 0 {
+                        break;
                     }
-
-                    population.insert(score, agent);
+                    if population.contains_score(score) {
+                        score -= 1;
+                    } else {
+                        break;
+                    }
                 }
-            }
 
-            population
+                population.insert(score, agent);
+            }
+        }
+
+        population
     }
 
     pub fn set_agents(&mut self, agents: BTreeMap<isize, Agent<Gene>>) {
@@ -78,7 +76,7 @@ Gene: Clone + PartialEq + Hash
         self.agents.insert(score, agent);
     }
 
-    pub fn remove(&mut self, score: isize) -> Option<Agent<Gene>> {
+    pub fn remove(&mut self, score: isize) -> Option<Agent<Gene>> where Gene: Clone {
         let agent = self.agents.remove(&score);
         if self.unique_agents && agent.is_some() {
             self.register.remove(&agent.clone().unwrap().get_hash());

@@ -6,12 +6,12 @@ use rand::{
 };
 
 #[derive(Clone)]
-pub struct Agent <Gene> where Gene: Clone {
+pub struct Agent <Gene> {
     genes: Vec<Gene>,
     hash: u64
 }
 
-impl <Gene> Agent<Gene> where Gene: Clone {
+impl <Gene> Agent<Gene> {
     pub fn new(number_of_genes: usize) -> Self where Standard: Distribution<Gene>, Gene: Hash {
         let mut genes = Vec::with_capacity(number_of_genes);
         for _ in 0..number_of_genes {
@@ -32,7 +32,7 @@ impl <Gene> Agent<Gene> where Gene: Clone {
         return &self.genes;
     }
 
-    pub fn crossover_some_genes(&mut self, other: &Self) where Gene: Hash {
+    pub fn crossover_some_genes(&mut self, other: &Self) where Gene: Clone + Hash {
         let mut rng = rand::thread_rng();
         
         let self_len = self.genes.len();
@@ -89,7 +89,7 @@ impl <Gene> Agent<Gene> where Gene: Clone {
 }
 
 pub fn mate <Gene> (parent1: &Agent<Gene>, parent2: &Agent<Gene>) -> Agent<Gene> 
-where Standard: Distribution<Gene>, Gene: Clone + PartialEq + Hash {
+where Gene: Clone + Hash {
     let mut child = parent1.clone();
 
     child.crossover_some_genes(parent2);
