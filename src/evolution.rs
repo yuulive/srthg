@@ -74,7 +74,7 @@ Data: Clone + Send + 'static
         let number_of_new_populations = sub_populations_per_level.pow(level);
         let mut new_populations = Vec::new();
         for _ in 0..number_of_new_populations {
-            let mut population = Population::new_empty();
+            let mut population = Population::new_empty(false);
             for _ in 0..sub_populations_per_level {
                 let sub_population = populations.pop().unwrap();
                 for (score, agent) in sub_population.get_agents() {
@@ -99,7 +99,7 @@ where Gene: Clone + PartialEq + Hash, Standard: Distribution<Gene>,
 IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
 Data: Clone
     {
-    let mut population = Population::new_empty();
+    let mut population = Population::new_empty(false);
     for _ in 0..start_size {
         let agent = Agent::new(number_of_genes);
         if population.will_accept(&agent) {

@@ -208,7 +208,7 @@ pub fn mate_alpha_agents<Gene, IndexFunction, Data>(
     }
     let mut top_agents = population.get_agents().clone();
     let top_agents = top_agents.split_off(&keys[mate_number]);
-    let mut top_pop = Population::new_empty();
+    let mut top_pop = Population::new_empty(false);
     top_pop.set_agents(top_agents);
 
     let clones_one = make_vec_of_cloned_agents_for_threads(&mut top_pop, threads, rate / 2.0);
