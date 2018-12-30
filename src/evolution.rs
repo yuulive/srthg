@@ -27,7 +27,7 @@ Data: Clone + Send + 'static
     let number_of_initial_populations = sub_populations_per_level.pow(levels);
     let mut populations = Vec::new();
     for _ in 0..number_of_initial_populations {
-        populations.push(run_iterations(create_population(initial_population_size, &data, number_of_genes, get_score_index), iterations_on_each_population, &data, false, get_score_index));
+        populations.push(run_iterations(Population::new(initial_population_size, number_of_genes, false, &data, get_score_index), iterations_on_each_population, &data, false, get_score_index));
     }
 
     populations_from_existing_multillevel(populations, levels, sub_populations_per_level, &data, iterations_on_each_population, get_score_index)
@@ -88,39 +88,6 @@ Data: Clone + Send + 'static
     }
 
     populations.pop().unwrap()
-}
-
-fn create_population<Gene, IndexFunction, Data>(
-    start_size: usize,
-    data: &Data,
-    number_of_genes: usize,
-    get_score_index: &'static IndexFunction) -> Population<Gene>
-where Gene: Clone + PartialEq + Hash, Standard: Distribution<Gene>,
-IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
-Data: Clone
-    {
-    let mut population = Population::new_empty(false);
-    for _ in 0..start_size {
-        let agent = Agent::new(number_of_genes);
-        if population.will_accept(&agent) {
-            let mut score = get_score_index(&agent, &data);
-
-            loop {
-                if score == 0 {
-                    break;
-                }
-                if population.contains_score(score) {
-                    score -= 1;
-                } else {
-                    break;
-                }
-            }
-
-            population.insert(score, agent);
-        }
-    }
-
-    population
 }
 
 fn run_iterations<Gene, IndexFunction, Data>(

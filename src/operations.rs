@@ -61,7 +61,7 @@ IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static
     let mut children = Vec::new();
     for (_key, mut agent) in agents {
         agent.mutate();
-        let score_index = get_score_index(&agent, &data) + rng.gen_range(-25, 25);;
+        let score_index = get_score_index(&agent, &data) + rng.gen_range(-25, 25);
         children.push((score_index, agent));
     }
     children
