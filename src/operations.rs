@@ -32,7 +32,7 @@ Data: Clone + Send + 'static
 
         for agents in groups {           
             let data_copy = data.clone();
-            handles.push(thread::spawn(move || get_mutated_agents(agents, data_copy, get_score_index)));
+            handles.push(thread::spawn(move || get_mutated_agents(agents, &data_copy, get_score_index)));
         }
 
         for handle in handles {
@@ -43,7 +43,7 @@ Data: Clone + Send + 'static
         }
     } else {
         for agents in groups {
-            let children = get_mutated_agents(agents, data.clone(), get_score_index);
+            let children = get_mutated_agents(agents, data, get_score_index);
             for (score_index, agent) in children {
                 population.insert(score_index, agent);
             }
@@ -55,7 +55,7 @@ Data: Clone + Send + 'static
 
 fn get_mutated_agents<Gene, IndexFunction, Data>(
     agents: Vec<Agent<Gene>>,
-    data: Data,
+    data: &Data,
     get_score_index: IndexFunction
 ) -> Vec<(isize, Agent<Gene>)>
 where Standard: Distribution<Gene>,
@@ -66,7 +66,7 @@ IndexFunction: Fn(&Agent<Gene>, &Data) -> isize
     let mut children = Vec::new();
     for mut agent in agents {
         agent.mutate();
-        let score_index = get_score_index(&agent, &data) + rng.gen_range(-25, 25);
+        let score_index = get_score_index(&agent, data) + rng.gen_range(-25, 25);
         children.push((score_index, agent));
     }
     children
@@ -110,7 +110,7 @@ pub fn mate_some_agents<Gene, IndexFunction, Data>(
     } else {
 
         for pairs in groups { 
-            let children = create_children(pairs, &data.clone(), get_score_index);
+            let children = create_children(pairs, data, get_score_index);
             for (score_index, agent) in children {
                 population.insert(score_index, agent);
             }
@@ -273,7 +273,7 @@ pub fn mate_alpha_agents<Gene, IndexFunction, Data>(
     } else {
 
         for pairs in groups { 
-            let children = create_children(pairs, &data.clone(), get_score_index);
+            let children = create_children(pairs, data, get_score_index);
             for (score_index, agent) in children {
                 population.insert(score_index, agent);
             }
