@@ -34,15 +34,29 @@ impl <Gene> Agent<Gene> where Standard: Distribution<Gene>, Gene: Clone + Partia
 
     pub fn crossover_some_genes(&mut self, other: &Self) {
         let mut rng = rand::thread_rng();
-        let mut gene_count = self.genes.len();
-        if gene_count > other.genes.len() {
-            gene_count = other.genes.len();
+        
+        let self_len = self.genes.len();
+        let other_len = other.genes.len();
+
+        let mut gene_count = self_len;
+        if self_len > other_len {
+            gene_count = other_len;
         }
+
         let crossover_point = rng.gen_range(0, gene_count);
 
-        self.genes.truncate(crossover_point);
+        let mut self_crossover_point = crossover_point;
+        let mut other_crossover_point = crossover_point;
+
+        if self_len > other_len {
+            self_crossover_point += self_len - other_len;
+        } else if other_len > self_len {
+            other_crossover_point += other_len - self_len;
+        }
+
+        self.genes.truncate(self_crossover_point);
         let mut other_genes = other.get_genes().clone();
-        other_genes.drain(..crossover_point);
+        other_genes.drain(..other_crossover_point);
         self.genes.append(&mut other_genes);
 
         let mut s = DefaultHasher::new();
@@ -81,4 +95,118 @@ where Standard: Distribution<Gene>, Gene: Clone + PartialEq + Hash {
     child.crossover_some_genes(parent2);
 
     return child;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_no_genes() {
+        let agent: Agent<u8> = Agent::new(0);
+        let empty_vec: Vec<u8> = Vec::new();
+        assert_eq!(&empty_vec, agent.get_genes());
+
+        // Hash is still generated when there are no genes.
+        let mut s = DefaultHasher::new();
+        empty_vec.hash(&mut s);
+        assert_eq!(s.finish(), agent.get_hash());
+    }
+
+    #[test]
+    fn new_with_genes() {
+        let agent: Agent<u8> = Agent::new(2);
+
+        let genes = agent.get_genes();
+        assert_eq!(2, genes.len());
+
+        // Ensure hash is already available.
+        let mut s = DefaultHasher::new();
+        genes.hash(&mut s);
+        assert_eq!(s.finish(), agent.get_hash());
+    }
+
+    #[test]
+    fn mutate() {
+        let mut agent: Agent<u8> = Agent::new(2);
+
+        agent.mutate();
+
+        // Length should still be as specified in new().
+        let genes = agent.get_genes();
+        assert_eq!(2, genes.len());
+
+        // Ensure hash is correct.
+        let mut s = DefaultHasher::new();
+        genes.hash(&mut s);
+        assert_eq!(s.finish(), agent.get_hash());
+    }
+
+    #[test]
+    fn crossover_some_genes_same_length_other() {
+        let mut agent: Agent<u8> = Agent::new(6);
+        let other: Agent<u8> = Agent::new(6);
+
+        agent.crossover_some_genes(&other);
+
+        // Length should still be as specified in new().
+        let genes = agent.get_genes();
+        assert_eq!(6, genes.len());
+
+        // Ensure hash is correct.
+        let mut s = DefaultHasher::new();
+        genes.hash(&mut s);
+        assert_eq!(s.finish(), agent.get_hash());
+    }
+
+    #[test]
+    fn crossover_some_genes_shorter_other() {
+        let mut agent: Agent<u8> = Agent::new(6);
+        let other: Agent<u8> = Agent::new(5);
+
+        agent.crossover_some_genes(&other);
+
+        // Length should still be as specified in new().
+        let genes = agent.get_genes();
+        assert_eq!(6, genes.len());
+
+        // Ensure hash is correct.
+        let mut s = DefaultHasher::new();
+        genes.hash(&mut s);
+        assert_eq!(s.finish(), agent.get_hash());
+    }
+
+    #[test]
+    fn crossover_some_genes_longer_other() {
+        let mut agent: Agent<u8> = Agent::new(6);
+        let other: Agent<u8> = Agent::new(7);
+
+        agent.crossover_some_genes(&other);
+
+        // Length should still be as specified in new().
+        let genes = agent.get_genes();
+        assert_eq!(6, genes.len());
+
+        // Ensure hash is correct.
+        let mut s = DefaultHasher::new();
+        genes.hash(&mut s);
+        assert_eq!(s.finish(), agent.get_hash());
+    }
+
+    #[test]
+    fn mate_parents() {
+        let parent_one: Agent<u8> = Agent::new(6);
+        let parent_two: Agent<u8> = Agent::new(5);
+
+        let child = mate(&parent_one, &parent_two);
+
+        // Length should be as for parent_one.
+        let genes = child.get_genes();
+        assert_eq!(6, genes.len());
+
+        // Ensure hash is correct.
+        let mut s = DefaultHasher::new();
+        genes.hash(&mut s);
+        assert_eq!(s.finish(), child.get_hash());
+    }
 }
