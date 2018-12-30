@@ -23,7 +23,7 @@ IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
 Data: Clone + Send + 'static
 {
     let groups = arrange_agents_into_groups(
-        get_random_subset(population.get_agents().clone(), rate),
+        get_random_subset(population.get_agents(), rate),
         threads
     );
 
@@ -86,8 +86,8 @@ pub fn mate_some_agents<Gene, IndexFunction, Data>(
 {
     let groups = arrange_pairs_into_groups(
         create_random_pairs(
-            get_random_subset(population.get_agents().clone(), rate / 2.0),
-            get_random_subset(population.get_agents().clone(), rate / 2.0)
+            get_random_subset(population.get_agents(), rate / 2.0),
+            get_random_subset(population.get_agents(), rate / 2.0)
         ),
         threads
     );
@@ -140,9 +140,9 @@ IndexFunction: Fn(&Agent<Gene>, &Data) -> isize
 }
 
 fn get_random_subset<Gene>(
-    agents: BTreeMap<isize, Agent<Gene>>,
+    agents: &BTreeMap<isize, Agent<Gene>>,
     rate: f64
-) -> BTreeMap<isize, Agent<Gene>>
+) -> BTreeMap<isize, &Agent<Gene>>
 where Gene: Clone
 {
     let number = rate_to_number(agents.len(), rate);
@@ -153,7 +153,7 @@ where Gene: Clone
         let key = keys[rng.gen_range(0, keys.len())];
         let agent = agents.get(&key);
         if agent.is_some() {
-            subset.insert(key, agent.unwrap().clone());
+            subset.insert(key, agent.unwrap());
         }
     }
 
@@ -178,14 +178,14 @@ Gene: Clone
 }
 
 fn arrange_agents_into_groups<Gene>(
-    agents:  BTreeMap<isize, Agent<Gene>>,
+    agents:  BTreeMap<isize, &Agent<Gene>>,
     threads: usize
 ) -> Vec<Vec<Agent<Gene>>>
 where Gene: Clone {
     let mut groups = vec![Vec::new(); threads];
     let mut count = 0;
     for (_score, agent) in agents {
-        groups[count % threads].push(agent);
+        groups[count % threads].push(agent.clone());
         count += 1;
     }
 
@@ -193,8 +193,8 @@ where Gene: Clone {
 }
 
 fn create_random_pairs<Gene>(
-    one: BTreeMap<isize, Agent<Gene>>,
-    two: BTreeMap<isize, Agent<Gene>>
+    one: BTreeMap<isize, &Agent<Gene>>,
+    two: BTreeMap<isize, &Agent<Gene>>
 ) -> Vec<(Agent<Gene>, Agent<Gene>)> 
 where
 Gene: Clone
@@ -215,8 +215,10 @@ Gene: Clone
         let one_agent = one.get(&one_key);
         let two_agent = two.get(&two_key);
         if one_agent.is_some() && two_agent.is_some() {
-            if !one_agent.unwrap().has_same_genes(two_agent.unwrap()) {
-                pairs.push((one_agent.unwrap().clone(), two_agent.unwrap().clone()));
+            let one_agent = *one_agent.unwrap();
+            let two_agent = *two_agent.unwrap();
+            if !one_agent.has_same_genes(two_agent) {
+                pairs.push((one_agent.clone(), two_agent.clone()));
             }
         }
     }
@@ -246,8 +248,8 @@ pub fn mate_alpha_agents<Gene, IndexFunction, Data>(
 
     let groups = arrange_pairs_into_groups(
         create_random_pairs(
-            get_random_subset(top_agents.clone(), rate / 2.0),
-            get_random_subset(top_agents, rate / 2.0)
+            get_random_subset(&top_agents, rate / 2.0),
+            get_random_subset(&top_agents, rate / 2.0)
         ),
         threads
     );
