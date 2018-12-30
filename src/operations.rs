@@ -62,12 +62,26 @@ where Standard: Distribution<Gene>,
 Gene: Clone + Hash,
 IndexFunction: Fn(&Agent<Gene>, &Data) -> isize
 {
-    let mut rng = rand::thread_rng();
+    let offset = 25;
+    let mut current_offset = 0;
+    let mut increase_offset = false;
+
     let mut children = Vec::new();
     for mut agent in agents {
         agent.mutate();
-        let score_index = get_score_index(&agent, &data) + rng.gen_range(-25, 25);
+        let score_index = get_score_index(&agent, &data) + current_offset;
         children.push((score_index, agent));
+        if increase_offset {
+            current_offset += 1;
+            if current_offset == offset {
+                increase_offset = false;
+            }
+        } else {
+            current_offset -= 1;
+            if current_offset == offset {
+                increase_offset = true;
+            }
+        }
     }
     children
 }
@@ -129,12 +143,26 @@ where
 Gene: Clone + Hash,
 IndexFunction: Fn(&Agent<Gene>, &Data) -> isize
 {
-    let mut rng = rand::thread_rng();
+    let offset = 25;
+    let mut current_offset = 0;
+    let mut increase_offset = false;
+
     let mut children = Vec::new();
     for (parent_one, parent_two) in pairs {
         let child = mate(&parent_one, &parent_two);
-        let score_index = get_score_index(&child, data) + rng.gen_range(-25, 25);;
+        let score_index = get_score_index(&child, data) + current_offset;
         children.push((score_index, child));
+        if increase_offset {
+            current_offset += 1;
+            if current_offset == offset {
+                increase_offset = false;
+            }
+        } else {
+            current_offset -= 1;
+            if current_offset == offset {
+                increase_offset = true;
+            }
+        }
     }
     return children;
 }
