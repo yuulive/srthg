@@ -7,6 +7,7 @@ use rand::{
 };
 use std::thread;
 use std::marker::Send;
+use std::collections::BTreeMap;
 
 pub fn mutate_some_agents<Gene, IndexFunction, Data>(
     mut population: Population<Gene>,
@@ -20,14 +21,17 @@ pub fn mutate_some_agents<Gene, IndexFunction, Data>(
         Data: Clone + Send + 'static
         {
 
-    let clones = remove_random_agents_into_groups(&mut population, threads, rate);
+    let groups = arrange_agents_into_groups(
+        get_random_subset(population.get_agents().clone(), rate),
+        threads
+    );
 
     if threads > 1 {
         let mut handles = Vec::new();
 
-        for cloned_agents in clones {           
+        for agents in groups {           
             let data_copy = data.clone();
-            handles.push(thread::spawn(move || get_mutated_agents(cloned_agents, data_copy, get_score_index)));
+            handles.push(thread::spawn(move || get_mutated_agents(agents, data_copy, get_score_index)));
         }
 
         for handle in handles {
@@ -37,8 +41,8 @@ pub fn mutate_some_agents<Gene, IndexFunction, Data>(
             }
         }
     } else {
-        for cloned_agents in clones {
-            let children = get_mutated_agents(cloned_agents, data.clone(), get_score_index);
+        for agents in groups {
+            let children = get_mutated_agents(agents, data.clone(), get_score_index);
             for (score_index, agent) in children {
                 population.insert(score_index, agent);
             }
@@ -49,7 +53,7 @@ pub fn mutate_some_agents<Gene, IndexFunction, Data>(
 }
 
 fn get_mutated_agents<Gene, IndexFunction, Data>(
-    agents: Vec<(isize, Agent<Gene>)>,
+    agents: Vec<Agent<Gene>>,
     data: Data,
     get_score_index: IndexFunction
 ) -> Vec<(isize, Agent<Gene>)>
@@ -59,7 +63,7 @@ IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static
  {
     let mut rng = rand::thread_rng();
     let mut children = Vec::new();
-    for (_key, mut agent) in agents {
+    for mut agent in agents {
         agent.mutate();
         let score_index = get_score_index(&agent, &data) + rng.gen_range(-25, 25);
         children.push((score_index, agent));
@@ -72,8 +76,7 @@ pub fn mate_some_agents<Gene, IndexFunction, Data>(
     rate: f64,
     data: &Data,
     get_score_index: &'static IndexFunction,
-    threads: usize,
-    max_diff: isize
+    threads: usize
     ) -> Population<Gene>
  where Standard: Distribution<Gene>, 
  Gene: Clone + PartialEq + Hash + Send + 'static, 
@@ -81,20 +84,20 @@ pub fn mate_some_agents<Gene, IndexFunction, Data>(
  Data: Clone + Send + 'static
    {
 
-    let clones_one = make_vec_of_cloned_agents_for_threads(&mut population, threads, rate / 2.0);
-    let mut clones_two = make_vec_of_cloned_agents_for_threads(&mut population, threads, rate / 2.0);
+    let groups = arrange_pairs_into_groups(
+        create_random_pairs(
+            get_random_subset(population.get_agents().clone(), rate / 2.0),
+            get_random_subset(population.get_agents().clone(), rate / 2.0)
+        ),
+        threads
+    );
 
     if threads > 1 {
         let mut handles = Vec::new();
         {       
-            for cloned_agents in clones_one {           
+            for pairs in groups {           
                 let data_copy = data.clone();
-                let other_agents = clones_two.pop();
-                if other_agents.is_some() {
-                    let mut other_agents = other_agents.unwrap();
-
-                    handles.push(thread::spawn(move || create_children(cloned_agents, other_agents, &data_copy, get_score_index, max_diff)));
-                }
+                handles.push(thread::spawn(move || create_children(pairs, &data_copy, get_score_index)));
             }
         }
 
@@ -106,15 +109,10 @@ pub fn mate_some_agents<Gene, IndexFunction, Data>(
         }
     } else {
 
-        for cloned_agents in clones_one { 
-            let data_copy = data.clone();
-            let other_agents = clones_two.pop();
-            if other_agents.is_some() {
-                let mut other_agents = other_agents.unwrap();
-                let children = create_children(cloned_agents, other_agents, &data_copy, get_score_index, max_diff);
-                for (score_index, agent) in children {
-                    population.insert(score_index, agent);
-                }
+        for pairs in groups { 
+            let children = create_children(pairs, &data.clone(), get_score_index);
+            for (score_index, agent) in children {
+                population.insert(score_index, agent);
             }
         }
     }
@@ -123,11 +121,9 @@ pub fn mate_some_agents<Gene, IndexFunction, Data>(
 }
 
 fn create_children<Gene, IndexFunction, Data>(
-    parent1_agents: Vec<(isize, Agent<Gene>)>,
-    parent2_agents: Vec<(isize, Agent<Gene>)>,
+    pairs: Vec<(Agent<Gene>, Agent<Gene>)>,
     data: &Data,
-    get_score_index: &'static IndexFunction,
-    max_diff: isize
+    get_score_index: &'static IndexFunction
     ) -> Vec<(isize, Agent<Gene>)>
  where Standard: Distribution<Gene>, 
  Gene: Clone + PartialEq + Hash + Send + 'static, 
@@ -136,57 +132,97 @@ fn create_children<Gene, IndexFunction, Data>(
   {
     let mut rng = rand::thread_rng();
     let mut children = Vec::new();
-    let mut other_parents = parent2_agents.iter();
-    for (key, agent) in parent1_agents {
-        let other = other_parents.next();
-        if other.is_some() {
-            let (other_key, other_agent) = other.unwrap();
-            let diff = key - other_key;
-            if diff.abs() < max_diff {
-                if !agent.has_same_genes(&other_agent) {
-                    let child = mate(&other_agent, &agent);
-                    let score_index = get_score_index(&child, data) + rng.gen_range(-25, 25);;
-                    children.push((score_index, child));
-                }
-            }
-        }
+    for (parent_one, parent_two) in pairs {
+        let child = mate(&parent_one, &parent_two);
+        let score_index = get_score_index(&child, data) + rng.gen_range(-25, 25);;
+        children.push((score_index, child));
     }
     return children;
 }
 
-fn make_vec_of_cloned_agents_for_threads<Gene>(
-        population: &mut Population<Gene>,
-        threads: usize,
-        rate: f64
-    ) -> Vec<Vec<(isize, Agent<Gene>)>>
-where Gene: Clone + PartialEq + Hash, Standard: Distribution<Gene> {
-    let mut clones = vec![Vec::new(); threads];
-    for count in 0..rate_to_number(population.len(), rate) {
-        let key = population.get_random_score();
-        let agent = population.get(key);
+fn get_random_subset<Gene>(
+    agents: BTreeMap<isize, Agent<Gene>>,
+    rate: f64
+) -> BTreeMap<isize, Agent<Gene>>
+where Gene: Clone
+{
+    let number = rate_to_number(agents.len(), rate);
+    let keys: Vec<isize> = agents.keys().map(|k| *k).collect();
+    let mut rng = rand::thread_rng();
+    let mut subset = BTreeMap::new();
+    for _ in 0..number {
+        let key = keys[rng.gen_range(0, keys.len())];
+        let agent = agents.get(&key);
         if agent.is_some() {
-            clones[count % threads].push((key, agent.unwrap().clone()));
+            subset.insert(key, agent.unwrap().clone());
         }
     }
 
-    clones
+    subset
 }
 
-fn remove_random_agents_into_groups<Gene>(
-        population: &mut Population<Gene>,
-        threads: usize,
-        rate: f64
-    ) -> Vec<Vec<(isize, Agent<Gene>)>> 
-where Gene: Clone + PartialEq + Hash, Standard: Distribution<Gene> {
-    let mut clones = vec![Vec::new(); threads];
-    for count in 0..rate_to_number(population.len(), rate) {
-        let key = population.get_random_score();
-        let agent = population.remove(key);
-        if agent.is_some() {
-            clones[count % threads].push((key, agent.unwrap()));
+fn arrange_pairs_into_groups<Gene>(
+    pairs: Vec<(Agent<Gene>, Agent<Gene>)>,
+    threads: usize
+    ) -> Vec<Vec<(Agent<Gene>, Agent<Gene>)>>
+    where
+    Gene: Clone
+    {
+    let mut groups = vec![Vec::new(); threads];
+    let mut count = 0;
+    for pair in pairs {
+        groups[count % threads].push(pair);
+        count += 1;
+    }
+
+    groups
+}
+
+fn arrange_agents_into_groups<Gene>(
+    agents:  BTreeMap<isize, Agent<Gene>>,
+    threads: usize
+) -> Vec<Vec<Agent<Gene>>>
+where Gene: Clone {
+    let mut groups = vec![Vec::new(); threads];
+    let mut count = 0;
+    for (_score, agent) in agents {
+        groups[count % threads].push(agent);
+        count += 1;
+    }
+
+    groups
+}
+
+fn create_random_pairs<Gene>(
+    one: BTreeMap<isize, Agent<Gene>>,
+    two: BTreeMap<isize, Agent<Gene>>
+) -> Vec<(Agent<Gene>, Agent<Gene>)> 
+where
+Gene: Clone
+{
+    let one_keys: Vec<isize> = one.keys().map(|k| *k).collect();
+    let two_keys: Vec<isize> = two.keys().map(|k| *k).collect();
+    let mut rng = rand::thread_rng();
+    let mut pairs = Vec::new();
+    let mut count = one_keys.len();
+    if one_keys.len() > two_keys.len() {
+        count = two_keys.len();
+    }
+
+    for _ in 0..count {
+        let one_key = one_keys[rng.gen_range(0, one_keys.len())];
+        let two_key = two_keys[rng.gen_range(0, two_keys.len())];
+
+        let one_agent = one.get(&one_key);
+        let two_agent = two.get(&two_key);
+        if one_agent.is_some() && two_agent.is_some() {
+            if !one_agent.unwrap().has_same_genes(two_agent.unwrap()) {
+                pairs.push((one_agent.unwrap().clone(), two_agent.unwrap().clone()));
+            }
         }
     }
-    clones
+
+    pairs
 }
 
 pub fn mate_alpha_agents<Gene, IndexFunction, Data>(
@@ -194,8 +230,8 @@ pub fn mate_alpha_agents<Gene, IndexFunction, Data>(
     rate: f64,
     data: &Data,
     get_score_index: &'static IndexFunction,
-    threads: usize,
-    max_diff: isize) -> Population<Gene>
+    threads: usize
+) -> Population<Gene>
  where Standard: Distribution<Gene>, 
  Gene: Clone + PartialEq + Hash + Send + 'static, 
  IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
@@ -206,25 +242,23 @@ pub fn mate_alpha_agents<Gene, IndexFunction, Data>(
     if mate_number >= keys.len() {
         return population;
     }
-    let mut top_agents = population.get_agents().clone();
-    let top_agents = top_agents.split_off(&keys[mate_number]);
-    let mut top_pop = Population::new_empty(false);
-    top_pop.set_agents(top_agents);
 
-    let clones_one = make_vec_of_cloned_agents_for_threads(&mut top_pop, threads, rate / 2.0);
-    let mut clones_two = make_vec_of_cloned_agents_for_threads(&mut top_pop, threads, rate / 2.0);
+    let top_agents = population.get_agents().clone().split_off(&keys[mate_number]);
+
+    let groups = arrange_pairs_into_groups(
+        create_random_pairs(
+            get_random_subset(top_agents.clone(), rate / 2.0),
+            get_random_subset(top_agents, rate / 2.0)
+        ),
+        threads
+    );
 
     if threads > 1 {
         let mut handles = Vec::new();
         {       
-            for cloned_agents in clones_one {           
+            for pairs in groups {           
                 let data_copy = data.clone();
-                let other_agents = clones_two.pop();
-                if other_agents.is_some() {
-                    let mut other_agents = other_agents.unwrap();
-
-                    handles.push(thread::spawn(move || create_children(cloned_agents, other_agents, &data_copy, get_score_index, max_diff)));
-                }
+                handles.push(thread::spawn(move || create_children(pairs, &data_copy, get_score_index)));
             }
         }
 
@@ -237,15 +271,10 @@ pub fn mate_alpha_agents<Gene, IndexFunction, Data>(
 
     } else {
 
-        for cloned_agents in clones_one { 
-            let data_copy = data.clone();
-            let other_agents = clones_two.pop();
-            if other_agents.is_some() {
-                let mut other_agents = other_agents.unwrap();
-                let children = create_children(cloned_agents, other_agents, &data_copy, get_score_index, max_diff);
-                for (score_index, agent) in children {
-                    population.insert(score_index, agent);
-                }
+        for pairs in groups { 
+            let children = create_children(pairs, &data.clone(), get_score_index);
+            for (score_index, agent) in children {
+                population.insert(score_index, agent);
             }
         }
     }
@@ -274,4 +303,10 @@ fn rate_to_number(population: usize, rate: f64) -> usize {
     }
 
     number
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
 }

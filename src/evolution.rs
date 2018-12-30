@@ -102,8 +102,8 @@ Data: Clone + Send + 'static
     {
     for x in 0..iterations {
         population = mutate_some_agents(population, 0.1, data, get_score_index, 1);
-        population = mate_alpha_agents(population, 0.2, data, get_score_index, 1, 2500);
-        population = mate_some_agents(population, 0.5, data, get_score_index, 1, 1000);
+        population = mate_alpha_agents(population, 0.2, data, get_score_index, 1);
+        population = mate_some_agents(population, 0.5, data, get_score_index, 1);
         population = cull_lowest_agents(population, 0.02);
 
         if print_progress && x % 10 == 0 {
