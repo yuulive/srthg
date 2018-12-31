@@ -92,9 +92,9 @@ Data: Clone + Send + 'static
         for _ in 0..number_of_new_populations {
             let mut population = Population::new_empty(false);
             for _ in 0..sub_populations_per_level {
-                let sub_population = populations.pop().unwrap();
-                for (score, agent) in sub_population.get_agents() {
-                    population.insert(*score, agent.clone());
+                let agents = populations.pop().unwrap().get_agents().clone();
+                for (score, agent) in agents {
+                    population.insert(score, agent);
                 }
             }
             new_populations.push(
