@@ -199,8 +199,8 @@ fn create_random_pairs<Gene>(
 where
 Gene: Clone
 {
-    let one_keys: Vec<isize> = one.keys().map(|k| *k).collect();
-    let two_keys: Vec<isize> = two.keys().map(|k| *k).collect();
+    let one_keys: Vec<&isize> = one.keys().collect();
+    let two_keys: Vec<&isize> = two.keys().collect();
     let mut rng = rand::thread_rng();
     let mut pairs = Vec::new();
     let mut count = one_keys.len();
@@ -212,8 +212,8 @@ Gene: Clone
         let one_key = one_keys[rng.gen_range(0, one_keys.len())];
         let two_key = two_keys[rng.gen_range(0, two_keys.len())];
 
-        let one_agent = one.get(&one_key);
-        let two_agent = two.get(&two_key);
+        let one_agent = one.get(one_key);
+        let two_agent = two.get(two_key);
         if one_agent.is_some() && two_agent.is_some() {
             let one_agent = *one_agent.unwrap();
             let two_agent = *two_agent.unwrap();
