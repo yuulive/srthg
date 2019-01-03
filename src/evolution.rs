@@ -86,6 +86,7 @@ Standard: Distribution<Gene>,
 IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
 Data: Clone + Send + 'static
 {
+    let cull_proportion = 1.0 - 1.0 / sub_populations_per_level as f64;
     for level in (0..levels).rev() {
         let number_of_new_populations = sub_populations_per_level.pow(level);
         let mut new_populations = Vec::new();
@@ -100,7 +101,8 @@ Data: Clone + Send + 'static
             new_populations.push(
                 cull_lowest_agents(
                     run_iterations(population, iterations_on_each_population, data, get_score_index),
-                    0.75
+                    cull_proportion,
+                    1
                 )
             );
         }
@@ -124,10 +126,10 @@ IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
 Data: Clone + Send + 'static
 {
     for _ in 0..iterations {
-        population = mutate_some_agents(population, 0.1, data, get_score_index, 1);
-        population = mate_alpha_agents(population, 0.2, data, get_score_index, 1);
-        population = mate_some_agents(population, 0.5, data, get_score_index, 1);
-        population = cull_lowest_agents(population, 0.02);
+        population = mutate_some_agents(population, 0.1, 1, data, get_score_index, 25, 1);
+        population = mate_alpha_agents(population, 0.2, 1, data, get_score_index, 25, 1);
+        population = mate_some_agents(population, 0.5, 1, data, get_score_index, 25, 1);
+        population = cull_lowest_agents(population, 0.02, 1);
     }
 
     population

@@ -12,8 +12,10 @@ use std::collections::BTreeMap;
 pub fn mutate_some_agents<Gene, IndexFunction, Data>(
     mut population: Population<Gene>,
     rate: f64,
+    preferred_minimum: usize,
     data: &Data,
     get_score_index: &'static IndexFunction,
+    offset: isize,
     threads: usize
 ) -> Population<Gene>
 where
@@ -23,7 +25,7 @@ IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
 Data: Clone + Send + 'static
 {
     let groups = arrange_agents_into_groups(
-        get_random_subset(population.get_agents(), rate),
+        get_random_subset(population.get_agents(), rate, preferred_minimum),
         threads
     );
 
@@ -32,7 +34,7 @@ Data: Clone + Send + 'static
 
         for agents in groups {           
             let data_copy = data.clone();
-            handles.push(thread::spawn(move || get_mutated_agents(agents, &data_copy, get_score_index)));
+            handles.push(thread::spawn(move || get_mutated_agents(agents, &data_copy, get_score_index, offset)));
         }
 
         for handle in handles {
@@ -43,7 +45,7 @@ Data: Clone + Send + 'static
         }
     } else {
         for agents in groups {
-            let children = get_mutated_agents(agents, data, get_score_index);
+            let children = get_mutated_agents(agents, data, get_score_index, offset);
             for (score_index, agent) in children {
                 population.insert(score_index, agent);
             }
@@ -56,7 +58,8 @@ Data: Clone + Send + 'static
 fn get_mutated_agents<Gene, IndexFunction, Data>(
     agents: Vec<Agent<Gene>>,
     data: &Data,
-    get_score_index: IndexFunction
+    get_score_index: IndexFunction,
+    offset: isize
 ) -> Vec<(isize, Agent<Gene>)>
 where Standard: Distribution<Gene>,
 Gene: Clone + Hash,
@@ -66,7 +69,7 @@ IndexFunction: Fn(&Agent<Gene>, &Data) -> isize
     let mut children = Vec::new();
     for mut agent in agents {
         agent.mutate();
-        let score_index = get_score_index(&agent, data) + rng.gen_range(-25, 25);
+        let score_index = get_score_index(&agent, data) + rng.gen_range(-offset, offset);
         children.push((score_index, agent));
     }
     children
@@ -75,8 +78,10 @@ IndexFunction: Fn(&Agent<Gene>, &Data) -> isize
 pub fn mate_some_agents<Gene, IndexFunction, Data>(
     mut population: Population<Gene>,
     rate: f64,
+    preferred_minimum: usize,
     data: &Data,
     get_score_index: &'static IndexFunction,
+    offset: isize,
     threads: usize
     ) -> Population<Gene>
  where
@@ -86,8 +91,8 @@ pub fn mate_some_agents<Gene, IndexFunction, Data>(
 {
     let groups = arrange_pairs_into_groups(
         create_random_pairs(
-            get_random_subset(population.get_agents(), rate / 2.0),
-            get_random_subset(population.get_agents(), rate / 2.0)
+            get_random_subset(population.get_agents(), rate / 2.0, preferred_minimum / 2),
+            get_random_subset(population.get_agents(), rate / 2.0, preferred_minimum / 2)
         ),
         threads
     );
@@ -97,7 +102,7 @@ pub fn mate_some_agents<Gene, IndexFunction, Data>(
         {       
             for pairs in groups {           
                 let data_copy = data.clone();
-                handles.push(thread::spawn(move || create_children(pairs, &data_copy, get_score_index)));
+                handles.push(thread::spawn(move || create_children(pairs, &data_copy, get_score_index, offset)));
             }
         }
 
@@ -110,7 +115,7 @@ pub fn mate_some_agents<Gene, IndexFunction, Data>(
     } else {
 
         for pairs in groups { 
-            let children = create_children(pairs, data, get_score_index);
+            let children = create_children(pairs, data, get_score_index, offset);
             for (score_index, agent) in children {
                 population.insert(score_index, agent);
             }
@@ -123,7 +128,8 @@ pub fn mate_some_agents<Gene, IndexFunction, Data>(
 fn create_children<Gene, IndexFunction, Data>(
     pairs: Vec<(Agent<Gene>, Agent<Gene>)>,
     data: &Data,
-    get_score_index: &'static IndexFunction
+    get_score_index: &'static IndexFunction,
+    offset: isize
 ) -> Vec<(isize, Agent<Gene>)>
 where 
 Gene: Clone + Hash,
@@ -133,7 +139,7 @@ IndexFunction: Fn(&Agent<Gene>, &Data) -> isize
     let mut children = Vec::new();
     for (parent_one, parent_two) in pairs {
         let child = mate(&parent_one, &parent_two);
-        let score_index = get_score_index(&child, data) + rng.gen_range(-25, 25);;
+        let score_index = get_score_index(&child, data) + rng.gen_range(-offset, offset);;
         children.push((score_index, child));
     }
     return children;
@@ -141,11 +147,12 @@ IndexFunction: Fn(&Agent<Gene>, &Data) -> isize
 
 fn get_random_subset<Gene>(
     agents: &BTreeMap<isize, Agent<Gene>>,
-    rate: f64
+    rate: f64,
+    preferred_minimum: usize
 ) -> BTreeMap<isize, &Agent<Gene>>
 where Gene: Clone
 {
-    let number = rate_to_number(agents.len(), rate);
+    let number = rate_to_number(agents.len(), rate, preferred_minimum);
     let keys: Vec<isize> = agents.keys().map(|k| *k).collect();
     let mut rng = rand::thread_rng();
     let mut subset = BTreeMap::new();
@@ -229,8 +236,10 @@ Gene: Clone
 pub fn mate_alpha_agents<Gene, IndexFunction, Data>(
     mut population: Population<Gene>,
     rate: f64,
+    preferred_minimum: usize,
     data: &Data,
     get_score_index: &'static IndexFunction,
+    offset: isize,
     threads: usize
 ) -> Population<Gene>
  where 
@@ -239,7 +248,7 @@ pub fn mate_alpha_agents<Gene, IndexFunction, Data>(
  Data: Clone + Send + 'static
    {
     let keys: Vec<isize> = population.get_agents().keys().map(|k| *k).collect();
-    let mate_number = rate_to_number(keys.len(), rate);
+    let mate_number = rate_to_number(keys.len(), rate, preferred_minimum);
     if mate_number >= keys.len() {
         return population;
     }
@@ -248,8 +257,8 @@ pub fn mate_alpha_agents<Gene, IndexFunction, Data>(
 
     let groups = arrange_pairs_into_groups(
         create_random_pairs(
-            get_random_subset(&top_agents, rate / 2.0),
-            get_random_subset(&top_agents, rate / 2.0)
+            get_random_subset(&top_agents, rate / 2.0, preferred_minimum / 2),
+            get_random_subset(&top_agents, rate / 2.0, preferred_minimum / 2)
         ),
         threads
     );
@@ -259,7 +268,7 @@ pub fn mate_alpha_agents<Gene, IndexFunction, Data>(
         {       
             for pairs in groups {           
                 let data_copy = data.clone();
-                handles.push(thread::spawn(move || create_children(pairs, &data_copy, get_score_index)));
+                handles.push(thread::spawn(move || create_children(pairs, &data_copy, get_score_index, offset)));
             }
         }
 
@@ -273,7 +282,7 @@ pub fn mate_alpha_agents<Gene, IndexFunction, Data>(
     } else {
 
         for pairs in groups { 
-            let children = create_children(pairs, data, get_score_index);
+            let children = create_children(pairs, data, get_score_index, offset);
             for (score_index, agent) in children {
                 population.insert(score_index, agent);
             }
@@ -285,11 +294,12 @@ pub fn mate_alpha_agents<Gene, IndexFunction, Data>(
 
 pub fn cull_lowest_agents<Gene>(
     mut population: Population<Gene>,
-    rate: f64
+    rate: f64,
+    preferred_minimum: usize
 ) -> Population<Gene>
 {
     let keys: Vec<isize> = population.get_agents().keys().map(|k| *k).collect();
-    let cull_number = rate_to_number(keys.len(), rate);
+    let cull_number = rate_to_number(keys.len(), rate, preferred_minimum);
     if cull_number >= keys.len() {
         return population;
     }
@@ -297,13 +307,13 @@ pub fn cull_lowest_agents<Gene>(
     population
 }
 
-fn rate_to_number(population: usize, rate: f64) -> usize {
-    if population == 0 {
-        return 0;
+fn rate_to_number(population: usize, rate: f64, preferred_minimum: usize) -> usize {
+    if population < preferred_minimum {
+        return population;
     }
-    let mut number = (population as f64 * rate) as usize;
-    if number == 0 {
-        number = 1;
+    let number = (population as f64 * rate) as usize;
+    if number < preferred_minimum {
+        return preferred_minimum;
     }
 
     number
