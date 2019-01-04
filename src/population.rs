@@ -106,6 +106,16 @@ impl <Gene> Population <Gene>{
         }
     }
 
+    pub fn cull_all_above(&mut self, score: isize) {
+        self.agents.split_off(&score);
+        if self.unique_agents {
+            self.register.clear();
+            for (_, agent) in &self.agents {
+                self.register.insert(agent.get_hash());
+            }
+        }
+    }
+
     pub fn contains_score(&self, score: isize) -> bool {
         self.agents.contains_key(&score)
     }

@@ -57,7 +57,8 @@ impl Selection {
     {
         match self.selection_type {
             SelectionType::RandomAny => get_random_subset(population.get_agents(), self.proportion, self.preferred_minimum),
-            _ => get_random_subset(population.get_agents(), self.proportion, self.preferred_minimum)
+            SelectionType::HighestScore => get_highest_scored_agents(population.get_agents(), self.proportion, self.preferred_minimum),
+            SelectionType::LowestScore => get_lowest_scored_agents(population.get_agents(), self.proportion, self.preferred_minimum)
         }
     }
 
@@ -225,8 +226,8 @@ pub fn cull_agents<Gene>(
     
     match selection.selection_type() {
         SelectionType::LowestScore => population.cull_all_below(keys[cull_number]),
-        SelectionType::HighestScore => (),
-        SelectionType::RandomAny => ()
+        SelectionType::HighestScore => population.cull_all_above(keys[cull_number]),
+        SelectionType::RandomAny => panic!("RandomAny selection not yet implemented for cull agents")
     };
     population
 }
@@ -284,6 +285,48 @@ where Gene: Clone
     let mut subset = BTreeMap::new();
     for _ in 0..number {
         let key = keys[rng.gen_range(0, keys.len())];
+        let agent = agents.get(&key);
+        if agent.is_some() {
+            subset.insert(key, agent.unwrap());
+        }
+    }
+
+    subset
+}
+
+fn get_highest_scored_agents<Gene>(
+    agents: &BTreeMap<isize, Agent<Gene>>,
+    rate: f64,
+    preferred_minimum: usize
+) -> BTreeMap<isize, &Agent<Gene>>
+where Gene: Clone
+{
+    let number = rate_to_number(agents.len(), rate, preferred_minimum);
+    let mut keys: Vec<isize> = agents.keys().map(|k| *k).collect();
+    keys.drain(0..number);
+    let mut subset = BTreeMap::new();
+    for key in keys {
+        let agent = agents.get(&key);
+        if agent.is_some() {
+            subset.insert(key, agent.unwrap());
+        }
+    }
+
+    subset
+}
+
+fn get_lowest_scored_agents<Gene>(
+    agents: &BTreeMap<isize, Agent<Gene>>,
+    rate: f64,
+    preferred_minimum: usize
+) -> BTreeMap<isize, &Agent<Gene>>
+where Gene: Clone
+{
+    let number = rate_to_number(agents.len(), rate, preferred_minimum);
+    let mut keys: Vec<isize> = agents.keys().map(|k| *k).collect();
+    keys.truncate(number);
+    let mut subset = BTreeMap::new();
+    for key in keys {
         let agent = agents.get(&key);
         if agent.is_some() {
             subset.insert(key, agent.unwrap());

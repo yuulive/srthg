@@ -1,9 +1,6 @@
 use super::population::Population;
 use super::operations::{
     Operation,
-    OperationType,
-    Selection,
-    SelectionType,
     cull_lowest_agents
 };
 use std::thread;
