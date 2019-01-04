@@ -1,12 +1,5 @@
 To do:
 
-_Paramterise remaining magic numbers_
-* random score offset
-* Minimum number in rate_to_number? Or is 1 logical to be there internally? or should it be 0?
-* mutation rate from evolution functions
-* mating rate (some and alpha) from evolution functions
-* cull lowest rate from evolutions functions
-
 _Tests_
 * Unit tests for operations
 * Unit tests for evolution functions
