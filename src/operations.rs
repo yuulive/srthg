@@ -57,7 +57,7 @@ impl Selection {
     {
         match self.selection_type {
             SelectionType::RandomAny => get_random_subset(population.get_agents(), self.proportion, self.preferred_minimum),
-            _ => panic!("Not yet implemented")
+            _ => get_random_subset(population.get_agents(), self.proportion, self.preferred_minimum)
         }
     }
 
