@@ -9,13 +9,64 @@ use std::thread;
 use std::marker::{Send, PhantomData};
 use std::collections::BTreeMap;
 
-pub enum SelectionOperationType {
-    MutateSome,
-    MateSome,
-    MateAlpha,
-    CullLowest
+#[derive(Clone, Copy)]
+pub enum OperationType {
+    Mutate,
+    Mate,
+    Cull
 }
 
+#[derive(Clone, Copy)]
+pub enum SelectionType {
+    RandomAny,
+    HighestScore,
+    LowestScore
+}
+
+#[derive(Clone, Copy)]
+pub struct Selection {
+    selection_type: SelectionType,
+    proportion: f64,
+    preferred_minimum: usize
+}
+
+impl Selection {
+    pub fn with_values(selection_type: SelectionType, proportion: f64, preferred_minimum: usize) -> Self {
+        Self {
+            selection_type: selection_type,
+            proportion: proportion,
+            preferred_minimum: preferred_minimum
+        }
+    }
+
+    pub fn selection_type(&self) -> SelectionType {
+        self.selection_type
+    }
+
+    pub fn proportion(&self) -> f64 {
+        self.proportion
+    }
+
+    pub fn preferred_minimum(&self) -> usize {
+        self.preferred_minimum
+    }
+
+    pub fn agents <'a, Gene> (&self, population: &'a Population<Gene>) -> BTreeMap<isize, &'a Agent<Gene>>
+    where
+    Gene: Clone
+    {
+        match self.selection_type {
+            SelectionType::RandomAny => get_random_subset(population.get_agents(), self.proportion, self.preferred_minimum),
+            _ => panic!("Not yet implemented")
+        }
+    }
+
+    pub fn count <Gene> (&self, population: &Population<Gene>) -> usize {
+        rate_to_number(population.len(), self.proportion, self.preferred_minimum)
+    }
+}
+
+#[derive(Clone)]
 pub struct Operation <Gene, Data, IndexFunction>
 where
 Standard: Distribution<Gene>,
@@ -23,9 +74,8 @@ Gene: Clone + Hash + Send + 'static,
 IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
 Data: Clone + Send + 'static
 {
-    selection_operation_type: SelectionOperationType,
-    rate: f64,
-    preferred_minimum: usize,
+    selection: Selection,
+    operation_type: OperationType,
     get_score_index: &'static IndexFunction,
     offset: isize,
     threads: usize,
@@ -41,17 +91,15 @@ IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
 Data: Clone + Send + 'static
 {
     pub fn new(
-        selection_operation_type: SelectionOperationType,
-        rate: f64,
-        preferred_minimum: usize,
+        selection: Selection,
+        operation_type: OperationType,
         get_score_index: &'static IndexFunction,
         offset: isize,
         threads: usize
         ) -> Self {
         Self {
-            selection_operation_type: selection_operation_type,
-            rate: rate,
-            preferred_minimum: preferred_minimum,
+            selection: selection,
+            operation_type: operation_type,
             get_score_index: get_score_index,
             offset: offset,
             threads: threads,
@@ -62,20 +110,17 @@ Data: Clone + Send + 'static
 
     pub fn run (&self, population: Population<Gene>, data: &Data) -> Population<Gene>
     {
-        match self.selection_operation_type {
-            SelectionOperationType::MutateSome => mutate_some_agents(population, self.rate, self.preferred_minimum, data, self.get_score_index, self.offset, self.threads),
-            SelectionOperationType::MateSome => mate_some_agents(population, self.rate, self.preferred_minimum, data, self.get_score_index, self.offset, self.threads),
-            SelectionOperationType::MateAlpha => mate_alpha_agents(population, self.rate, self.preferred_minimum, data, self.get_score_index, self.offset, self.threads),
-            SelectionOperationType::CullLowest => cull_lowest_agents(population, self.rate, self.preferred_minimum)
+        match self.operation_type {
+            OperationType::Mutate => mutate_agents(population, self.selection, data, self.get_score_index, self.offset, self.threads),
+            OperationType::Mate => mate_agents(population, self.selection, data, self.get_score_index, self.offset, self.threads),
+            OperationType::Cull => cull_agents(population, self.selection)
         }
     }
 }
 
-
-pub fn mutate_some_agents<Gene, IndexFunction, Data>(
+pub fn mutate_agents<Gene, IndexFunction, Data>(
     mut population: Population<Gene>,
-    rate: f64,
-    preferred_minimum: usize,
+    selection: Selection,
     data: &Data,
     get_score_index: &'static IndexFunction,
     offset: isize,
@@ -88,7 +133,7 @@ IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
 Data: Clone + Send + 'static
 {
     let groups = arrange_agents_into_groups(
-        get_random_subset(population.get_agents(), rate, preferred_minimum),
+        selection.agents(&population),
         threads
     );
 
@@ -118,44 +163,23 @@ Data: Clone + Send + 'static
     population
 }
 
-fn get_mutated_agents<Gene, IndexFunction, Data>(
-    agents: Vec<Agent<Gene>>,
-    data: &Data,
-    get_score_index: IndexFunction,
-    offset: isize
-) -> Vec<(isize, Agent<Gene>)>
-where Standard: Distribution<Gene>,
-Gene: Clone + Hash,
-IndexFunction: Fn(&Agent<Gene>, &Data) -> isize
-{
-    let mut rng = rand::thread_rng();
-    let mut children = Vec::new();
-    for mut agent in agents {
-        agent.mutate();
-        let score_index = get_score_index(&agent, data) + rng.gen_range(-offset, offset);
-        children.push((score_index, agent));
-    }
-    children
-}
-
-pub fn mate_some_agents<Gene, IndexFunction, Data>(
+pub fn mate_agents<Gene, IndexFunction, Data>(
     mut population: Population<Gene>,
-    rate: f64,
-    preferred_minimum: usize,
+    selection: Selection,
     data: &Data,
     get_score_index: &'static IndexFunction,
     offset: isize,
     threads: usize
-    ) -> Population<Gene>
- where
- Gene: Clone + Hash + Send + 'static, 
- IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
- Data: Clone + Send + 'static
+) -> Population<Gene>
+where
+Standard: Distribution<Gene>,
+Gene: Clone + Hash + Send + 'static,
+IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
+Data: Clone + Send + 'static
 {
     let groups = arrange_pairs_into_groups(
         create_random_pairs(
-            get_random_subset(population.get_agents(), rate / 2.0, preferred_minimum / 2),
-            get_random_subset(population.get_agents(), rate / 2.0, preferred_minimum / 2)
+            selection.agents(&population)
         ),
         threads
     );
@@ -186,6 +210,45 @@ pub fn mate_some_agents<Gene, IndexFunction, Data>(
     }
 
     population
+}
+
+pub fn cull_agents<Gene>(
+    mut population: Population<Gene>,
+    selection: Selection,
+) -> Population<Gene>
+{
+    let keys: Vec<isize> = population.get_agents().keys().map(|k| *k).collect();
+    let cull_number = selection.count(&population);
+    if cull_number >= keys.len() {
+        return population;
+    }
+    
+    match selection.selection_type() {
+        SelectionType::LowestScore => population.cull_all_below(keys[cull_number]),
+        SelectionType::HighestScore => (),
+        SelectionType::RandomAny => ()
+    };
+    population
+}
+
+fn get_mutated_agents<Gene, IndexFunction, Data>(
+    agents: Vec<Agent<Gene>>,
+    data: &Data,
+    get_score_index: IndexFunction,
+    offset: isize
+) -> Vec<(isize, Agent<Gene>)>
+where Standard: Distribution<Gene>,
+Gene: Clone + Hash,
+IndexFunction: Fn(&Agent<Gene>, &Data) -> isize
+{
+    let mut rng = rand::thread_rng();
+    let mut children = Vec::new();
+    for mut agent in agents {
+        agent.mutate();
+        let score_index = get_score_index(&agent, data) + rng.gen_range(-offset, offset);
+        children.push((score_index, agent));
+    }
+    children
 }
 
 fn create_children<Gene, IndexFunction, Data>(
@@ -263,27 +326,21 @@ where Gene: Clone {
 }
 
 fn create_random_pairs<Gene>(
-    one: BTreeMap<isize, &Agent<Gene>>,
-    two: BTreeMap<isize, &Agent<Gene>>
+    agents: BTreeMap<isize, &Agent<Gene>>,
 ) -> Vec<(Agent<Gene>, Agent<Gene>)> 
 where
 Gene: Clone
 {
-    let one_keys: Vec<&isize> = one.keys().collect();
-    let two_keys: Vec<&isize> = two.keys().collect();
+    let keys: Vec<&isize> = agents.keys().collect();
     let mut rng = rand::thread_rng();
     let mut pairs = Vec::new();
-    let mut count = one_keys.len();
-    if one_keys.len() > two_keys.len() {
-        count = two_keys.len();
-    }
-
+    let count = keys.len();
     for _ in 0..count {
-        let one_key = one_keys[rng.gen_range(0, one_keys.len())];
-        let two_key = two_keys[rng.gen_range(0, two_keys.len())];
+        let one_key = keys[rng.gen_range(0, keys.len())];
+        let two_key = keys[rng.gen_range(0, keys.len())];
 
-        let one_agent = one.get(one_key);
-        let two_agent = two.get(two_key);
+        let one_agent = agents.get(one_key);
+        let two_agent = agents.get(two_key);
         if one_agent.is_some() && two_agent.is_some() {
             let one_agent = *one_agent.unwrap();
             let two_agent = *two_agent.unwrap();
@@ -296,64 +353,6 @@ Gene: Clone
     pairs
 }
 
-pub fn mate_alpha_agents<Gene, IndexFunction, Data>(
-    mut population: Population<Gene>,
-    rate: f64,
-    preferred_minimum: usize,
-    data: &Data,
-    get_score_index: &'static IndexFunction,
-    offset: isize,
-    threads: usize
-) -> Population<Gene>
- where 
- Gene: Clone + Hash + Send + 'static, 
- IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
- Data: Clone + Send + 'static
-   {
-    let keys: Vec<isize> = population.get_agents().keys().map(|k| *k).collect();
-    let mate_number = rate_to_number(keys.len(), rate, preferred_minimum);
-    if mate_number >= keys.len() {
-        return population;
-    }
-
-    let top_agents = population.get_agents().clone().split_off(&keys[mate_number]);
-
-    let groups = arrange_pairs_into_groups(
-        create_random_pairs(
-            get_random_subset(&top_agents, rate / 2.0, preferred_minimum / 2),
-            get_random_subset(&top_agents, rate / 2.0, preferred_minimum / 2)
-        ),
-        threads
-    );
-
-    if threads > 1 {
-        let mut handles = Vec::new();
-        {       
-            for pairs in groups {           
-                let data_copy = data.clone();
-                handles.push(thread::spawn(move || create_children(pairs, &data_copy, get_score_index, offset)));
-            }
-        }
-
-        for handle in handles {
-            let children = handle.join().unwrap();
-            for (score_index, agent) in children {
-                population.insert(score_index, agent);
-            }
-        }
-
-    } else {
-
-        for pairs in groups { 
-            let children = create_children(pairs, data, get_score_index, offset);
-            for (score_index, agent) in children {
-                population.insert(score_index, agent);
-            }
-        }
-    }
-
-    population
-}
 
 pub fn cull_lowest_agents<Gene>(
     mut population: Population<Gene>,
