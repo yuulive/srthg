@@ -1,9 +1,8 @@
 use super::population::Population;
 use super::operations::{
-    mutate_some_agents,
-    mate_some_agents,
-    cull_lowest_agents,
-    mate_alpha_agents
+    Operation,
+    SelectionOperationType,
+    cull_lowest_agents
 };
 use std::thread;
 use rand::{
@@ -11,6 +10,8 @@ use rand::{
 };
 use std::hash::Hash;
 use super::agent::Agent;
+
+
 
 pub fn population_from_multilevel_sub_populations<Gene, IndexFunction, Data>(
     levels: u32,
@@ -125,11 +126,17 @@ Standard: Distribution<Gene>,
 IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
 Data: Clone + Send + 'static
 {
+
+    let mut operations = Vec::new();
+    operations.push(Operation::new(SelectionOperationType::MutateSome, 0.1, 1, get_score_index, 25, 1));
+    operations.push(Operation::new(SelectionOperationType::MateAlpha, 0.2, 1, get_score_index, 25, 1));
+    operations.push(Operation::new(SelectionOperationType::MateSome, 0.5, 1, get_score_index, 25, 1));
+    operations.push(Operation::new(SelectionOperationType::CullLowest, 0.02, 1, get_score_index, 25, 1));
+
     for _ in 0..iterations {
-        population = mutate_some_agents(population, 0.1, 1, data, get_score_index, 25, 1);
-        population = mate_alpha_agents(population, 0.2, 1, data, get_score_index, 25, 1);
-        population = mate_some_agents(population, 0.5, 1, data, get_score_index, 25, 1);
-        population = cull_lowest_agents(population, 0.02, 1);
+        for operation in operations.iter() {
+            population = operation.run(population, data);
+        }
     }
 
     population

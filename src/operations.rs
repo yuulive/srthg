@@ -6,8 +6,71 @@ use rand::{
     Rng,
 };
 use std::thread;
-use std::marker::Send;
+use std::marker::{Send, PhantomData};
 use std::collections::BTreeMap;
+
+pub enum SelectionOperationType {
+    MutateSome,
+    MateSome,
+    MateAlpha,
+    CullLowest
+}
+
+pub struct Operation <Gene, Data, IndexFunction>
+where
+Standard: Distribution<Gene>,
+Gene: Clone + Hash + Send + 'static,
+IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
+Data: Clone + Send + 'static
+{
+    selection_operation_type: SelectionOperationType,
+    rate: f64,
+    preferred_minimum: usize,
+    get_score_index: &'static IndexFunction,
+    offset: isize,
+    threads: usize,
+    gene: PhantomData<Gene>,
+    data: PhantomData<Data>
+}
+
+impl <Gene, Data, IndexFunction> Operation <Gene, Data, IndexFunction>
+where
+Standard: Distribution<Gene>,
+Gene: Clone + Hash + Send + 'static,
+IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
+Data: Clone + Send + 'static
+{
+    pub fn new(
+        selection_operation_type: SelectionOperationType,
+        rate: f64,
+        preferred_minimum: usize,
+        get_score_index: &'static IndexFunction,
+        offset: isize,
+        threads: usize
+        ) -> Self {
+        Self {
+            selection_operation_type: selection_operation_type,
+            rate: rate,
+            preferred_minimum: preferred_minimum,
+            get_score_index: get_score_index,
+            offset: offset,
+            threads: threads,
+            gene: PhantomData,
+            data: PhantomData
+        }
+    }
+
+    pub fn run (&self, population: Population<Gene>, data: &Data) -> Population<Gene>
+    {
+        match self.selection_operation_type {
+            SelectionOperationType::MutateSome => mutate_some_agents(population, self.rate, self.preferred_minimum, data, self.get_score_index, self.offset, self.threads),
+            SelectionOperationType::MateSome => mate_some_agents(population, self.rate, self.preferred_minimum, data, self.get_score_index, self.offset, self.threads),
+            SelectionOperationType::MateAlpha => mate_alpha_agents(population, self.rate, self.preferred_minimum, data, self.get_score_index, self.offset, self.threads),
+            SelectionOperationType::CullLowest => cull_lowest_agents(population, self.rate, self.preferred_minimum)
+        }
+    }
+}
+
 
 pub fn mutate_some_agents<Gene, IndexFunction, Data>(
     mut population: Population<Gene>,
