@@ -24,15 +24,14 @@ impl <Gene> Population <Gene>{
         }
     }
 
-    pub fn new<Data, IndexFunction>(
+    pub fn new<Data>(
         start_size: usize,
         number_of_genes: usize,
         unique: bool,
         data: &Data,
-        get_score_index: &'static IndexFunction
+        get_score_index: fn(&Agent<Gene>, &Data) -> isize,
     ) -> Population<Gene> 
     where
-    IndexFunction: Fn(&Agent<Gene>, &Data) -> isize,
     Standard: Distribution<Gene>,
     Gene: Hash
     {
@@ -155,7 +154,7 @@ mod tests {
 
     #[test]
     fn new_with_false_unique() {
-        let mut population = Population::new(5, 6, false, &0, &get_score_index);
+        let mut population = Population::new(5, 6, false, &0, get_score_index);
         assert_eq!(5, population.len());
         assert_eq!(5, population.get_agents().len());
         assert_eq!(5, population.get_scores().len());
@@ -179,7 +178,7 @@ mod tests {
 
     #[test]
     fn new_with_true_unique() {
-        let mut population = Population::new(5, 6, true, &0, &get_score_index);
+        let mut population = Population::new(5, 6, true, &0, get_score_index);
         assert_eq!(5, population.len());
         assert_eq!(5, population.get_agents().len());
         assert_eq!(5, population.get_scores().len());
@@ -213,7 +212,7 @@ mod tests {
 
     #[test]
     fn cull_all_below() {
-        let mut population = Population::new(5, 6, true, &0, &get_score_index);
+        let mut population = Population::new(5, 6, true, &0, get_score_index);
         assert_eq!(5, population.len());
         assert_eq!(5, population.get_agents().len());
         assert_eq!(5, population.get_scores().len());

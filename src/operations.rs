@@ -68,40 +68,35 @@ impl Selection {
 }
 
 #[derive(Clone)]
-pub struct Operation <Gene, Data, IndexFunction>
+pub struct Operation <Gene, Data>
 where
 Standard: Distribution<Gene>,
 Gene: Clone + Hash + Send + 'static,
-IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
 Data: Clone + Send + 'static
 {
     selection: Selection,
     operation_type: OperationType,
-    get_score_index: &'static IndexFunction,
     offset: isize,
     threads: usize,
     gene: PhantomData<Gene>,
     data: PhantomData<Data>
 }
 
-impl <Gene, Data, IndexFunction> Operation <Gene, Data, IndexFunction>
+impl <Gene, Data> Operation <Gene, Data>
 where
 Standard: Distribution<Gene>,
 Gene: Clone + Hash + Send + 'static,
-IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
 Data: Clone + Send + 'static
 {
-    pub fn new(
+    pub fn with_values(
         selection: Selection,
         operation_type: OperationType,
-        get_score_index: &'static IndexFunction,
         offset: isize,
         threads: usize
         ) -> Self {
         Self {
             selection: selection,
             operation_type: operation_type,
-            get_score_index: get_score_index,
             offset: offset,
             threads: threads,
             gene: PhantomData,
@@ -109,28 +104,41 @@ Data: Clone + Send + 'static
         }
     }
 
-    pub fn run (&self, population: Population<Gene>, data: &Data) -> Population<Gene>
+    pub fn removes_agents(
+        selection: Selection,
+        operation_type: OperationType,
+        ) -> Self {
+        Self {
+            selection: selection,
+            operation_type: operation_type,
+            offset: 0,
+            threads: 0,
+            gene: PhantomData,
+            data: PhantomData
+        }
+    }
+
+    pub fn run (&self, population: Population<Gene>, data: &Data, get_score_index: fn(&Agent<Gene>, &Data) -> isize) -> Population<Gene>
     {
         match self.operation_type {
-            OperationType::Mutate => mutate_agents(population, self.selection, data, self.get_score_index, self.offset, self.threads),
-            OperationType::Mate => mate_agents(population, self.selection, data, self.get_score_index, self.offset, self.threads),
+            OperationType::Mutate => mutate_agents(population, self.selection, data, get_score_index, self.offset, self.threads),
+            OperationType::Mate => mate_agents(population, self.selection, data, get_score_index, self.offset, self.threads),
             OperationType::Cull => cull_agents(population, self.selection)
         }
     }
 }
 
-pub fn mutate_agents<Gene, IndexFunction, Data>(
+pub fn mutate_agents<Gene, Data>(
     mut population: Population<Gene>,
     selection: Selection,
     data: &Data,
-    get_score_index: &'static IndexFunction,
+    get_score_index: fn(&Agent<Gene>, &Data) -> isize,
     offset: isize,
     threads: usize
 ) -> Population<Gene>
 where
 Standard: Distribution<Gene>,
 Gene: Clone + Hash + Send + 'static,
-IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
 Data: Clone + Send + 'static
 {
     let groups = arrange_agents_into_groups(
@@ -164,18 +172,17 @@ Data: Clone + Send + 'static
     population
 }
 
-pub fn mate_agents<Gene, IndexFunction, Data>(
+pub fn mate_agents<Gene, Data>(
     mut population: Population<Gene>,
     selection: Selection,
     data: &Data,
-    get_score_index: &'static IndexFunction,
+    get_score_index: fn(&Agent<Gene>, &Data) -> isize,
     offset: isize,
     threads: usize
 ) -> Population<Gene>
 where
 Standard: Distribution<Gene>,
 Gene: Clone + Hash + Send + 'static,
-IndexFunction: Send + Sync + Fn(&Agent<Gene>, &Data) -> isize + 'static,
 Data: Clone + Send + 'static
 {
     let groups = arrange_pairs_into_groups(
@@ -252,15 +259,14 @@ IndexFunction: Fn(&Agent<Gene>, &Data) -> isize
     children
 }
 
-fn create_children<Gene, IndexFunction, Data>(
+fn create_children<Gene, Data>(
     pairs: Vec<(Agent<Gene>, Agent<Gene>)>,
     data: &Data,
-    get_score_index: &'static IndexFunction,
+    get_score_index: fn(&Agent<Gene>, &Data) -> isize,
     offset: isize
 ) -> Vec<(isize, Agent<Gene>)>
 where 
-Gene: Clone + Hash,
-IndexFunction: Fn(&Agent<Gene>, &Data) -> isize
+Gene: Clone + Hash
 {
     let mut rng = rand::thread_rng();
     let mut children = Vec::new();
