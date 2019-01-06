@@ -135,3 +135,18 @@ Data: Clone + Send + 'static
 
     population
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn get_score_index(agent: &Agent<u8>, _data: &u8) -> isize {
+        agent.get_genes()[0] as isize
+    }
+
+    #[test]
+    fn run_iterations_nothing_to_do() {
+        let population = run_iterations(Population::new_empty(false), 0, &0, &Vec::new(), get_score_index);
+        assert_eq!(0, population.len());
+    }
+}
