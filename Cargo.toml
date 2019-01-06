@@ -2,6 +2,9 @@
 name = "aristeia"
 version = "0.1.0"
 authors = ["Brendan Cox <brendancox21@gmail.com>"]
+repository = "https://github.com/brendancox/aristeia"
+readme = "README.md"
+license = "Apache-2.0"
 
 [dependencies]
 rand = "0.6"
