@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::agent::{Agent, mate};
+use super::agent::{Agent, crossover};
 use super::population::Population;
 use std::hash::Hash;
 use rand::{
@@ -23,10 +23,12 @@ use std::thread;
 use std::marker::{Send, PhantomData};
 use std::collections::BTreeMap;
 
+pub type ScoreFunction<Gene, Data> = fn(&Agent<Gene>, &Data) -> isize;
+
 #[derive(Clone, Copy)]
 pub enum OperationType {
     Mutate,
-    Mate,
+    Crossover,
     Cull
 }
 
@@ -37,6 +39,7 @@ pub enum SelectionType {
     LowestScore
 }
 
+/// Allows definition of parameters for selecting some agents from a population.
 #[derive(Clone, Copy)]
 pub struct Selection {
     selection_type: SelectionType,
@@ -81,6 +84,7 @@ impl Selection {
     }
 }
 
+/// Modifies a selection of a population.
 #[derive(Clone)]
 pub struct Operation <Gene, Data>
 where
@@ -118,21 +122,21 @@ Data: Clone + Send + 'static
         }
     }
 
-    pub fn run (&self, population: Population<Gene>, data: &Data, get_score_index: fn(&Agent<Gene>, &Data) -> isize) -> Population<Gene>
+    pub fn run (&self, population: Population<Gene>, data: &Data, get_score_index: ScoreFunction<Gene, Data>) -> Population<Gene>
     {
         match self.operation_type {
             OperationType::Mutate => mutate_agents(population, self.selection, data, get_score_index, self.offset, self.threads),
-            OperationType::Mate => mate_agents(population, self.selection, data, get_score_index, self.offset, self.threads),
+            OperationType::Crossover => crossover_agents(population, self.selection, data, get_score_index, self.offset, self.threads),
             OperationType::Cull => cull_agents(population, self.selection)
         }
     }
 }
 
-pub fn mutate_agents<Gene, Data>(
+fn mutate_agents<Gene, Data>(
     mut population: Population<Gene>,
     selection: Selection,
     data: &Data,
-    get_score_index: fn(&Agent<Gene>, &Data) -> isize,
+    get_score_index: ScoreFunction<Gene, Data>,
     offset: isize,
     threads: usize
 ) -> Population<Gene>
@@ -172,11 +176,11 @@ Data: Clone + Send + 'static
     population
 }
 
-pub fn mate_agents<Gene, Data>(
+fn crossover_agents<Gene, Data>(
     mut population: Population<Gene>,
     selection: Selection,
     data: &Data,
-    get_score_index: fn(&Agent<Gene>, &Data) -> isize,
+    get_score_index: ScoreFunction<Gene, Data>,
     offset: isize,
     threads: usize
 ) -> Population<Gene>
@@ -197,7 +201,7 @@ Data: Clone + Send + 'static
         {       
             for pairs in groups {           
                 let data_copy = data.clone();
-                handles.push(thread::spawn(move || create_children(pairs, &data_copy, get_score_index, offset)));
+                handles.push(thread::spawn(move || create_children_from_crossover(pairs, &data_copy, get_score_index, offset)));
             }
         }
 
@@ -210,7 +214,7 @@ Data: Clone + Send + 'static
     } else {
 
         for pairs in groups { 
-            let children = create_children(pairs, data, get_score_index, offset);
+            let children = create_children_from_crossover(pairs, data, get_score_index, offset);
             for (score_index, agent) in children {
                 population.insert(score_index, agent);
             }
@@ -220,7 +224,7 @@ Data: Clone + Send + 'static
     population
 }
 
-pub fn cull_agents<Gene>(
+fn cull_agents<Gene>(
     mut population: Population<Gene>,
     selection: Selection,
 ) -> Population<Gene>
@@ -239,15 +243,14 @@ pub fn cull_agents<Gene>(
     population
 }
 
-fn get_mutated_agents<Gene, IndexFunction, Data>(
+fn get_mutated_agents<Gene, Data>(
     agents: Vec<Agent<Gene>>,
     data: &Data,
-    get_score_index: IndexFunction,
+    get_score_index: ScoreFunction<Gene, Data>,
     offset: isize
 ) -> Vec<(isize, Agent<Gene>)>
 where Standard: Distribution<Gene>,
-Gene: Clone + Hash,
-IndexFunction: Fn(&Agent<Gene>, &Data) -> isize
+Gene: Clone + Hash
 {
     let mut rng = rand::thread_rng();
     let mut children = Vec::new();
@@ -259,10 +262,10 @@ IndexFunction: Fn(&Agent<Gene>, &Data) -> isize
     children
 }
 
-fn create_children<Gene, Data>(
+fn create_children_from_crossover<Gene, Data>(
     pairs: Vec<(Agent<Gene>, Agent<Gene>)>,
     data: &Data,
-    get_score_index: fn(&Agent<Gene>, &Data) -> isize,
+    get_score_index: ScoreFunction<Gene, Data>,
     offset: isize
 ) -> Vec<(isize, Agent<Gene>)>
 where 
@@ -271,7 +274,7 @@ Gene: Clone + Hash
     let mut rng = rand::thread_rng();
     let mut children = Vec::new();
     for (parent_one, parent_two) in pairs {
-        let child = mate(&parent_one, &parent_two);
+        let child = crossover(&parent_one, &parent_two);
         let score_index = get_score_index(&child, data) + rng.gen_range(-offset, offset);;
         children.push((score_index, child));
     }

@@ -15,17 +15,16 @@
 use super::population::Population;
 use super::operations::{
     Operation,
-    cull_lowest_agents
+    cull_lowest_agents,
+    ScoreFunction
 };
 use std::thread;
 use rand::{
     distributions::{Distribution, Standard}
 };
 use std::hash::Hash;
-use super::agent::Agent;
 
-
-
+/// Creates a number of initial populations and merges the fittest of them as it gets to the next level.
 pub fn population_from_multilevel_sub_populations<Gene, Data>(
     levels: u32,
     sub_populations_per_level: usize,
@@ -33,7 +32,7 @@ pub fn population_from_multilevel_sub_populations<Gene, Data>(
     number_of_genes: usize,
     initial_population_size: usize,
     iterations_on_each_population: usize,
-    get_score_index: fn(&Agent<Gene>, &Data) -> isize,
+    get_score_index: ScoreFunction<Gene, Data>,
     operations: Vec<Operation<Gene, Data>>
 ) -> Population<Gene> 
 where
@@ -58,6 +57,9 @@ Data: Clone + Send + 'static
     populations_from_existing_multillevel(populations, levels, sub_populations_per_level, &data, iterations_on_each_population, &operations, get_score_index)
 }
 
+/// Creates a number of initial populations and merges the fittest of them as it gets to the next level.
+/// Will run on multiple threads equivalent to the sub_populations_per_level value until it gets to creating the final
+/// population that shall be returned.
 pub fn threaded_population_from_multilevel_sub_populations<Gene, Data>(
     levels: u32,
     sub_populations_per_level: usize,
@@ -65,7 +67,7 @@ pub fn threaded_population_from_multilevel_sub_populations<Gene, Data>(
     number_of_genes: usize,
     initial_population_size: usize,
     iterations_on_each_population: usize,
-    get_score_index: fn(&Agent<Gene>, &Data) -> isize,
+    get_score_index: ScoreFunction<Gene, Data>,
     operations: &Vec<Operation<Gene, Data>>
 ) -> Population<Gene> 
 where
@@ -95,7 +97,7 @@ fn populations_from_existing_multillevel<Gene, Data>(
     data: &Data,
     iterations_on_each_population: usize,
     operations: &Vec<Operation<Gene, Data>>,
-    get_score_index: fn(&Agent<Gene>, &Data) -> isize,
+    get_score_index: ScoreFunction<Gene, Data>,
 ) -> Population<Gene>
 where 
 Gene: Clone + Hash + Send + 'static,
@@ -134,7 +136,7 @@ fn run_iterations<Gene, Data>(
     iterations: usize,
     data: &Data,
     operations: &Vec<Operation<Gene, Data>>,
-    get_score_index: fn(&Agent<Gene>, &Data) -> isize
+    get_score_index: ScoreFunction<Gene, Data>
 ) -> Population<Gene>
 where
 Standard: Distribution<Gene>,
@@ -153,6 +155,7 @@ Data: Clone + Send + 'static
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::agent::Agent;
 
     fn get_score_index(agent: &Agent<u8>, _data: &u8) -> isize {
         agent.get_genes()[0] as isize

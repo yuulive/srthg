@@ -10,7 +10,6 @@ _Docs_
 * Read me (about and brief summary of what to do)
 * Getting started doc (more detail on what to do, but still concise)
 * Cargo.toml metadata
-* License
 
 _API_
 * Go through API guidelines: https://rust-lang-nursery.github.io/api-guidelines/about.html

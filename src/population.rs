@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use super::agent::Agent;
+use super::operations::ScoreFunction;
 use std::collections::{BTreeMap, HashSet};
 use std::hash::Hash;
 use rand::{
@@ -43,7 +44,7 @@ impl <Gene> Population <Gene>{
         number_of_genes: usize,
         unique: bool,
         data: &Data,
-        get_score_index: fn(&Agent<Gene>, &Data) -> isize,
+        get_score_index: ScoreFunction<Gene, Data>,
     ) -> Population<Gene> 
     where
     Standard: Distribution<Gene>,
@@ -51,7 +52,7 @@ impl <Gene> Population <Gene>{
     {
         let mut population = Population::new_empty(unique);
         for _ in 0..start_size {
-            let agent = Agent::new(number_of_genes);
+            let agent = Agent::with_genes(number_of_genes);
             if population.will_accept(&agent) {
                 let mut score = get_score_index(&agent, &data);
 

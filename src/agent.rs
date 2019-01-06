@@ -19,6 +19,7 @@ use rand::{
     Rng,
 };
 
+/// Carries a set of genes.
 #[derive(Clone)]
 pub struct Agent <Gene> {
     genes: Vec<Gene>,
@@ -26,7 +27,30 @@ pub struct Agent <Gene> {
 }
 
 impl <Gene> Agent<Gene> {
-    pub fn new(number_of_genes: usize) -> Self where Standard: Distribution<Gene>, Gene: Hash {
+
+    /// Creates an agents with no genes.
+    pub fn new() -> Self
+    where 
+    Standard: Distribution<Gene>,
+    Gene: Hash
+    {
+        let genes = Vec::new();
+        let mut s = DefaultHasher::new();
+        genes.hash(&mut s);
+        let hash = s.finish();
+
+        Self {
+            genes: genes,
+            hash: hash
+        }
+    }
+
+    /// Creates a new Agent with random set of genes.
+    pub fn with_genes(number_of_genes: usize) -> Self 
+    where 
+    Standard: Distribution<Gene>,
+    Gene: Hash 
+    {
         let mut genes = Vec::with_capacity(number_of_genes);
         for _ in 0..number_of_genes {
             genes.push(rand::random());
@@ -46,6 +70,8 @@ impl <Gene> Agent<Gene> {
         return &self.genes;
     }
 
+    /// Chooses a random point on genes of self and uses that as its crossover point.
+    /// Maintains the number of genes of self if the other has a different gene length.
     pub fn crossover_some_genes(&mut self, other: &Self) where Gene: Clone + Hash {
         let mut rng = rand::thread_rng();
         
@@ -78,7 +104,11 @@ impl <Gene> Agent<Gene> {
         self.hash = s.finish();
     }
 
-    pub fn mutate(&mut self) where Standard: Distribution<Gene>, Gene: Hash {
+    pub fn mutate(&mut self)
+    where
+    Standard: Distribution<Gene>,
+    Gene: Hash
+    {
         let mut rng = rand::thread_rng();
 
         let gene_count = self.genes.len();
@@ -97,12 +127,13 @@ impl <Gene> Agent<Gene> {
         self.hash == other.hash
     }
 
+    /// Gets a hash representing this agents gene sequence.
     pub fn get_hash(&self) -> u64 {
         self.hash
     }
 }
 
-pub fn mate <Gene> (parent1: &Agent<Gene>, parent2: &Agent<Gene>) -> Agent<Gene> 
+pub fn crossover <Gene> (parent1: &Agent<Gene>, parent2: &Agent<Gene>) -> Agent<Gene> 
 where Gene: Clone + Hash {
     let mut child = parent1.clone();
 
@@ -117,7 +148,7 @@ mod tests {
 
     #[test]
     fn new_no_genes() {
-        let agent: Agent<u8> = Agent::new(0);
+        let agent: Agent<u8> = Agent::new();
         let empty_vec: Vec<u8> = Vec::new();
         assert_eq!(&empty_vec, agent.get_genes());
 
@@ -129,7 +160,7 @@ mod tests {
 
     #[test]
     fn new_with_genes() {
-        let agent: Agent<u8> = Agent::new(2);
+        let agent: Agent<u8> = Agent::with_genes(2);
 
         let genes = agent.get_genes();
         assert_eq!(2, genes.len());
@@ -142,7 +173,7 @@ mod tests {
 
     #[test]
     fn mutate() {
-        let mut agent: Agent<u8> = Agent::new(2);
+        let mut agent: Agent<u8> = Agent::with_genes(2);
 
         agent.mutate();
 
@@ -158,8 +189,8 @@ mod tests {
 
     #[test]
     fn crossover_some_genes_same_length_other() {
-        let mut agent: Agent<u8> = Agent::new(6);
-        let other: Agent<u8> = Agent::new(6);
+        let mut agent: Agent<u8> = Agent::with_genes(6);
+        let other: Agent<u8> = Agent::with_genes(6);
 
         agent.crossover_some_genes(&other);
 
@@ -175,8 +206,8 @@ mod tests {
 
     #[test]
     fn crossover_some_genes_shorter_other() {
-        let mut agent: Agent<u8> = Agent::new(6);
-        let other: Agent<u8> = Agent::new(5);
+        let mut agent: Agent<u8> = Agent::with_genes(6);
+        let other: Agent<u8> = Agent::with_genes(5);
 
         agent.crossover_some_genes(&other);
 
@@ -192,8 +223,8 @@ mod tests {
 
     #[test]
     fn crossover_some_genes_longer_other() {
-        let mut agent: Agent<u8> = Agent::new(6);
-        let other: Agent<u8> = Agent::new(7);
+        let mut agent: Agent<u8> = Agent::with_genes(6);
+        let other: Agent<u8> = Agent::with_genes(7);
 
         agent.crossover_some_genes(&other);
 
@@ -208,11 +239,11 @@ mod tests {
     }
 
     #[test]
-    fn mate_parents() {
-        let parent_one: Agent<u8> = Agent::new(6);
-        let parent_two: Agent<u8> = Agent::new(5);
+    fn crossover_parents() {
+        let parent_one: Agent<u8> = Agent::with_genes(6);
+        let parent_two: Agent<u8> = Agent::with_genes(5);
 
-        let child = mate(&parent_one, &parent_two);
+        let child = crossover(&parent_one, &parent_two);
 
         // Length should be as for parent_one.
         let genes = child.get_genes();
