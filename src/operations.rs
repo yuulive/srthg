@@ -104,20 +104,6 @@ Data: Clone + Send + 'static
         }
     }
 
-    pub fn removes_agents(
-        selection: Selection,
-        operation_type: OperationType,
-        ) -> Self {
-        Self {
-            selection: selection,
-            operation_type: operation_type,
-            offset: 0,
-            threads: 0,
-            gene: PhantomData,
-            data: PhantomData
-        }
-    }
-
     pub fn run (&self, population: Population<Gene>, data: &Data, get_score_index: fn(&Agent<Gene>, &Data) -> isize) -> Population<Gene>
     {
         match self.operation_type {
@@ -309,7 +295,8 @@ where Gene: Clone
 {
     let number = rate_to_number(agents.len(), rate, preferred_minimum);
     let mut keys: Vec<isize> = agents.keys().map(|k| *k).collect();
-    keys.drain(0..number);
+    let keys_len = keys.len();
+    keys.drain(0..(keys_len - number));
     let mut subset = BTreeMap::new();
     for key in keys {
         let agent = agents.get(&key);
@@ -434,4 +421,87 @@ fn rate_to_number(population: usize, rate: f64, preferred_minimum: usize) -> usi
 mod tests {
     use super::*;
 
+    fn get_score_index(agent: &Agent<u8>, _data: &u8) -> isize {
+        agent.get_genes()[0] as isize
+    }
+
+    #[test]
+    fn selection_random_any_returns_correct_proportion() {
+        let selection = Selection::with_values(SelectionType::RandomAny, 0.25, 0);
+
+        let population = Population::new(8, 1, false, &0, get_score_index);
+
+        let agent_map = selection.agents(&population);
+        assert_eq!(2, agent_map.len());
+    }
+
+    #[test]
+    fn selection_highest_score_returns_highest() {
+        let selection = Selection::with_values(SelectionType::HighestScore, 0.25, 0);
+
+        let population = Population::new(8, 1, false, &0, get_score_index);
+
+        let agent_map = selection.agents(&population);
+        assert_eq!(2, agent_map.len());
+
+        let mut iter = population.get_agents().iter().rev();
+        let (score, _) = iter.next().unwrap();
+        assert!(agent_map.contains_key(score));
+        let (score, _) = iter.next().unwrap();
+        assert!(agent_map.contains_key(score));
+    }
+
+    #[test]
+    fn selection_lowest_score_returns_lowest() {
+        let selection = Selection::with_values(SelectionType::LowestScore, 0.25, 0);
+
+        let population = Population::new(8, 1, false, &0, get_score_index);
+
+        let agent_map = selection.agents(&population);
+        assert_eq!(2, agent_map.len());
+
+        let mut iter = population.get_agents().iter();
+        let (score, _) = iter.next().unwrap();
+        assert!(agent_map.contains_key(score));
+        let (score, _) = iter.next().unwrap();
+        assert!(agent_map.contains_key(score));
+    }
+
+    #[test]
+    fn rate_to_number_standard_proportion() {
+        assert_eq!(16, rate_to_number(20, 0.8, 0));
+    }
+
+    #[test]
+    fn rate_to_number_population_is_zero() {
+        assert_eq!(0, rate_to_number(0, 0.0, 0));
+        assert_eq!(0, rate_to_number(0, 0.8, 0));
+    }
+
+    #[test]
+    fn rate_to_number_full_proportion() {
+        assert_eq!(20, rate_to_number(20, 1.0, 0));
+    }
+
+    #[test]
+    fn rate_to_number_rounds_down() {
+        assert_eq!(7, rate_to_number(10, 0.75, 0));
+        assert_eq!(7, rate_to_number(10, 0.71, 0));
+        assert_eq!(7, rate_to_number(10, 0.79, 0));
+    }
+
+    #[test]
+    fn rate_to_number_minimum_preference_less_than_proportion() {
+        assert_eq!(7, rate_to_number(10, 0.7, 5));
+    }
+
+    #[test]
+    fn rate_to_number_minimum_preference_greater_than_proportion() {
+        assert_eq!(8, rate_to_number(10, 0.7, 8));
+    }
+
+    #[test]
+    fn rate_to_number_minimum_preference_greater_than_population() {
+        assert_eq!(4, rate_to_number(4, 0.5, 5));
+    }
 }
