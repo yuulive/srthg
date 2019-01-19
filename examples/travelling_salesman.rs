@@ -16,7 +16,9 @@ extern crate aristeia;
 extern crate rand;
 
 use aristeia::evolution::run_iterations;
-use self::Cities::{
+
+// We do this so that we don't have to prefix the city names with City::
+use self::City::{
     Wellington,
     PalmerstonNorth,
     NewPlymouth,
@@ -43,8 +45,9 @@ use aristeia::operations::{
     SelectionType,
 };
 
+// These are cities in the North Island of New Zealand.
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
-enum Cities {
+enum City {
     Wellington,
     PalmerstonNorth,
     NewPlymouth,
@@ -58,6 +61,7 @@ enum Cities {
 }
 
 pub fn main() {
+    // We'll be interested in how long the process takes.
     let now = Instant::now();
 
     let all_cities = vec![
@@ -73,6 +77,10 @@ pub fn main() {
         Auckland
     ];
     let cities_clone = all_cities.clone();
+
+    // There is always a data variable, for which the type is quite flexible and what you do with it is up to you.
+    // In this case, we're using it cache the distances between each city rather than doing that calculation every time
+    // we score a set of genes.
     let mut data = HashMap::new();
     for city in all_cities {
         for other in &cities_clone {
@@ -82,22 +90,29 @@ pub fn main() {
         }
     }
 
+    // Here we define what happens for each "generation" of the process.
     let operations = vec![
+        // We will mutate a random selection of 10% (that's the 0.1 in the Selection) of the population, but also a minimum of 1.
         Operation::with_values(
             Selection::with_values(SelectionType::RandomAny, 0.1, 1),
             OperationType::Mutate,
             25,
             1),
+        // We will get highest scored 20% and randomly pair them, creating children with crossed over genes out of those.
         Operation::with_values(
             Selection::with_values(SelectionType::HighestScore, 0.2, 1),
             OperationType::Crossover,
             25,
             1),
+        // We will take a random set of 50% of the population, randomly pair them and produce children with crossed over
+        // genes out of those.
         Operation::with_values(
             Selection::with_values(SelectionType::RandomAny, 0.5, 1),
             OperationType::Crossover,
             25,
             1),
+        // We will take the lowest 2% of the population and get rid of them. Note that just like in the previous operations,
+        // the minimum is set to 1. So there'll always be at least 1 agent culled.
         Operation::with_values(
             Selection::with_values(SelectionType::LowestScore, 0.02, 1),
             OperationType::Cull,
@@ -105,16 +120,23 @@ pub fn main() {
             1)
     ];
 
+    // Create a population of 20 agents which each have a set of 10 randomly chosen genes.
+    // We need to pass in the data as this is used for scoring the agents. 
+    // We also pass in a reference to the scoring function defined towards the end of this file.
     let population = Population::new(20, 10, false, &data, get_score_index);
+
+    // Now we run 50 iterations (or generations) on this population, meaning we run the operations we defined above
+    // 50 times over. Again, we need the data and scoring function references as these are used for scoring new agents.
     let population = run_iterations(population, 50, &data, &operations, get_score_index);
+
     let agents = population.get_agents();
 
     println!("Population: {}", agents.len());
     println!("Duration: {}", now.elapsed().as_secs() as f64 + now.elapsed().subsec_nanos() as f64 * 1e-9);
 
+    // This will the print the highest score and those that follow.
     let mut first = true;
     let mut first_score = 0;
-
     for (score_index, agent) in agents.iter().rev() {
         if first {
             first = false;
@@ -128,8 +150,11 @@ pub fn main() {
     }
 }
 
-impl Distribution<Cities> for Standard {
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Cities {
+// We need to define how random values are generated for the genes.
+// If you have a set of genes where you want the likelihood of each of them being returned to be equal,
+// you would probably define it a lot like this.
+impl Distribution<City> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> City {
         match rng.gen_range(0, 10) {
             0 => Wellington,
             1 => PalmerstonNorth,
@@ -145,6 +170,11 @@ impl Distribution<Cities> for Standard {
     }
 }
 
+// This just gives us the simple distance between 2 points on a 2d plane.
+// I could have been more technically correct and used a formula that determines
+// the distance between points on a globe (called the "haversine formula").
+// I also could have got something like the driving distance or the travel time from somewhere,
+// but for a demonstration of how the library works, I'm keeping things simple.
 fn distance_between_points(first: (f64, f64), second: (f64, f64)) -> f64 {
     let (x1, y1) = first;
     let (x2, y2) = second;
@@ -152,7 +182,8 @@ fn distance_between_points(first: (f64, f64), second: (f64, f64)) -> f64 {
     distance
 }
 
-fn get_coordinates(city: &Cities) -> (f64, f64) {
+// These are coordinates chosen from some point within or close to these cities.
+fn get_coordinates(city: &City) -> (f64, f64) {
     match city {
         Wellington => (-41.30, 174.77),
         PalmerstonNorth => (-40.35, 175.61),
@@ -167,7 +198,9 @@ fn get_coordinates(city: &Cities) -> (f64, f64) {
     }
 }
 
-fn get_distance(agent: &Agent<Cities>, data: &HashMap<(Cities, Cities), f64>) -> f64 {
+// Given an agent, and therefore it's full set of genes, or cities. Calculate the total distance
+// travelled when going through all those cities in that order.
+fn get_distance(agent: &Agent<City>, data: &HashMap<(City, City), f64>) -> f64 {
     let mut distance = 0.0;
     let mut previous_city = Wellington; // Initialise with something.
     let mut first = true;
@@ -188,7 +221,8 @@ fn get_distance(agent: &Agent<Cities>, data: &HashMap<(Cities, Cities), f64>) ->
     distance
 }
 
-fn get_score_index(agent: &Agent<Cities>, data: &HashMap<(Cities, Cities), f64>) -> isize {
+// The scoring function used to determine the score on an agent, based on its genes.
+fn get_score_index(agent: &Agent<City>, data: &HashMap<(City, City), f64>) -> isize {
     let distance = get_distance(agent, data);
 
     let mut repeats = 0;
@@ -200,6 +234,13 @@ fn get_score_index(agent: &Agent<Cities>, data: &HashMap<(Cities, Cities), f64>)
         }
     }
 
+    // To talk through this:
+    // 6.0 is about the distance between the two furthest cities (using the coordinates as units, I'm not actually even bothering to convert to km or miles).
+    // The above is multiplied by the length of the genes, because you could have a set that goes back and forth between the two furthest citis.
+    // So that gives the longest possible distance, now subtract the distance calculated for the set of genes we're scoring.
+    // Multiply by 100.0 - this is actually just to ensure the scores have a decent spread.
+    // The last set of brackets is a penalty on the score for any cities visited twice, the idea of this example is that 
+    // the salesman should be visiting each city once.
     let score = (6.0 * agent.get_genes().len() as f64 - distance) * 100.0 * (1.0 - repeats as f64 * 0.1);
 
     return score as isize;
