@@ -131,7 +131,7 @@ Data: Clone + Send + 'static
     populations.pop().unwrap()
 }
 
-fn run_iterations<Gene, Data>(
+pub fn run_iterations<Gene, Data>(
     mut population: Population<Gene>,
     iterations: usize,
     data: &Data,

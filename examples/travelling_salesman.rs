@@ -15,7 +15,7 @@
 extern crate aristeia;
 extern crate rand;
 
-use aristeia::evolution::threaded_population_from_multilevel_sub_populations;
+use aristeia::evolution::run_iterations;
 use self::Cities::{
     Wellington,
     PalmerstonNorth,
@@ -33,6 +33,7 @@ use rand::{
     Rng,
 };
 use aristeia::agent::Agent;
+use aristeia::population::Population;
 use std::time::Instant;
 use std::collections::{HashMap, HashSet};
 use aristeia::operations::{
@@ -104,7 +105,8 @@ pub fn main() {
             1)
     ];
 
-    let population = threaded_population_from_multilevel_sub_populations(2, 2, &data, 10, 20, 50, get_score_index, &operations);
+    let population = Population::new(20, 10, false, &data, get_score_index);
+    let population = run_iterations(population, 50, &data, &operations, get_score_index);
     let agents = population.get_agents();
 
     println!("Population: {}", agents.len());
