@@ -20,7 +20,7 @@ Create a new project and add the following to the cargo.toml file:
 
 ```toml
 [dependencies]
-aristeia = "0.1.0"
+aristeia = "0.1.1"
 ```
 
 In main.rs, start off with the following to get all the types you'll need for this example:
