@@ -30,13 +30,8 @@ use rand::{
 use std::time::Instant;
 use aristeia::agent::{Agent};
 
-use aristeia::evolution::threaded_population_from_multilevel_sub_populations;
-use aristeia::operations::{
-    Operation,
-    OperationType,
-    Selection,
-    SelectionType,
-};
+use aristeia::manager::Manager;
+
 
 #[derive(Clone, PartialEq, Hash)]
 enum Gene {
@@ -53,15 +48,10 @@ pub fn main() {
 
     let data = vec![0; 10];
 
-    let mut operations = Vec::new();
-    operations.push(Operation::with_values(Selection::with_values(SelectionType::RandomAny, 0.1, 1), OperationType::Mutate, 25, 1));
-    operations.push(Operation::with_values(Selection::with_values(SelectionType::HighestScore, 0.2, 1), OperationType::Crossover, 25, 1));
-    operations.push(Operation::with_values(Selection::with_values(SelectionType::RandomAny, 0.5, 1), OperationType::Crossover, 25, 1));
-    operations.push(Operation::with_values(Selection::with_values(SelectionType::LowestScore, 0.02, 1), OperationType::Cull, 25, 1));
-
-
-    let population = threaded_population_from_multilevel_sub_populations(3, 4, &data, 40, 50, 100, get_score_index, &operations);
-    let agents = population.get_agents();
+    let mut manager = Manager::new(get_score_index, data.clone());
+    manager.set_number_of_genes(30, false);
+    manager.run(9999);
+    let agents = manager.get_population().get_agents();
 
     println!("Duration: {}", now.elapsed().as_secs() as f64 + now.elapsed().subsec_nanos() as f64 * 1e-9);
     println!("Population: {}", agents.len());

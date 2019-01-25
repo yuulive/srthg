@@ -21,7 +21,7 @@ use rand::{
     Rng,
 };
 
-
+#[derive(Clone)]
 pub struct Population <Gene> {
     agents: BTreeMap<isize, Agent<Gene>>,
     register: HashSet<u64>,
