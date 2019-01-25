@@ -27,7 +27,6 @@ use super::operations::{
     cull_lowest_agents
 };
 use std::thread; 
-use std::thread::JoinHandle;
 use std::sync::mpsc::channel;
 use super::agent::Agent;
 use std::collections::BTreeMap;
@@ -119,21 +118,19 @@ Data: Clone + Send + 'static
         ]
     }
 
-    fn spawn_population_in_new_thread(&self) -> JoinHandle<Population<Gene>> {
-            let initial_population_size = self.initial_population_size;
-            let number_of_genes = self.number_of_genes;
-            let data = self.data.clone();
-            let score_function = self.score_function;
-            let operations = self.get_operations();
+    fn spawn_population_in_new_thread(&self) {
+        let initial_population_size = self.initial_population_size;
+        let number_of_genes = self.number_of_genes;
+        let data = self.data.clone();
+        let score_function = self.score_function;
+        let operations = self.get_operations();
 
-            let tx = self.agent_sender.clone();
+        let tx = self.agent_sender.clone();
 
-            let handle = thread::spawn(move || {
-                let population = run_iterations(Population::new(initial_population_size, number_of_genes, false, &data, score_function), 100, &data, &operations, score_function);
-                tx.send(population.get_agents().clone()).unwrap();
-                population
-            });
-
-            handle
+        thread::spawn(move || {
+            let population = run_iterations(Population::new(initial_population_size, number_of_genes, false, &data, score_function), 100, &data, &operations, score_function);
+            let population = cull_lowest_agents(population, 0.5, 1);
+            tx.send(population.get_agents().clone()).unwrap();
+        });
     }
 }
