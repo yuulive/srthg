@@ -26,7 +26,8 @@ use super::operations::{
     SelectionType,
     cull_lowest_agents
 };
-use std::thread;
+use std::thread; 
+use std::thread::JoinHandle;
 
 pub struct Manager <Gene, Data>
 where
@@ -74,25 +75,13 @@ Data: Clone + Send + 'static
     pub fn run(&mut self, goal: isize) {
         self.main_population = Population::new(self.initial_population_size, self.number_of_genes, false, &self.data, self.score_function);
         
-        let operations = vec![
-            Operation::with_values(Selection::with_values(SelectionType::RandomAny, 0.1, 1), OperationType::Mutate, 25, 1),
-            Operation::with_values(Selection::with_values(SelectionType::HighestScore, 0.2, 1), OperationType::Crossover, 25, 1),
-            Operation::with_values(Selection::with_values(SelectionType::RandomAny, 0.5, 1), OperationType::Crossover, 25, 1),
-            Operation::with_values(Selection::with_values(SelectionType::LowestScore, 0.02, 1), OperationType::Cull, 25, 1)
-        ];
+        let operations = self.get_operations();
 
         while self.current_highest < goal {
 
-            let initial_population_size = self.initial_population_size;
-            let number_of_genes = self.number_of_genes;
-            let data = self.data.clone();
-            let score_function = self.score_function;
-            let operations_thread = operations.clone();
-
-            let handle = thread::spawn(move || run_iterations(Population::new(initial_population_size, number_of_genes, false, &data, score_function), 100, &data, &operations_thread, score_function));
+            let handle = self.spawn_population_in_new_thread();
 
             let cloned_population = self.main_population.clone();
-
             self.main_population = run_iterations(cloned_population, 100, &self.data, &operations, self.score_function);
 
             let other_population = handle.join().unwrap();
@@ -108,5 +97,24 @@ Data: Clone + Send + 'static
 
     pub fn get_population(&self) -> &Population<Gene> {
         return &self.main_population;
+    }
+
+    fn get_operations(&self) -> Vec<Operation<Gene, Data>> {
+        vec![
+            Operation::with_values(Selection::with_values(SelectionType::RandomAny, 0.1, 1), OperationType::Mutate, 25, 1),
+            Operation::with_values(Selection::with_values(SelectionType::HighestScore, 0.2, 1), OperationType::Crossover, 25, 1),
+            Operation::with_values(Selection::with_values(SelectionType::RandomAny, 0.5, 1), OperationType::Crossover, 25, 1),
+            Operation::with_values(Selection::with_values(SelectionType::LowestScore, 0.02, 1), OperationType::Cull, 25, 1)
+        ]
+    }
+
+    fn spawn_population_in_new_thread(&self) -> JoinHandle<Population<Gene>> {
+            let initial_population_size = self.initial_population_size;
+            let number_of_genes = self.number_of_genes;
+            let data = self.data.clone();
+            let score_function = self.score_function;
+            let operations = self.get_operations();
+
+            thread::spawn(move || run_iterations(Population::new(initial_population_size, number_of_genes, false, &data, score_function), 100, &data, &operations, score_function))
     }
 }
