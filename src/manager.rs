@@ -45,7 +45,9 @@ Data: 'static
     initial_population_size: usize,
     current_highest: isize,
     agent_sender: Sender<BTreeMap<isize, Agent<Gene>>>,
-    agent_receiver: Receiver<BTreeMap<isize, Agent<Gene>>>
+    agent_receiver: Receiver<BTreeMap<isize, Agent<Gene>>>,
+    number_of_child_threads: u8,
+    max_child_threads: u8
 }
 
 impl <Gene, Data> Manager <Gene, Data>
@@ -68,7 +70,9 @@ Data: Clone + Send + 'static
             initial_population_size: 100,
             current_highest: 0,
             agent_sender: tx,
-            agent_receiver: rx
+            agent_receiver: rx,
+            number_of_child_threads: 0,
+            max_child_threads: 3
         }
     }
 
@@ -88,15 +92,25 @@ Data: Clone + Send + 'static
 
         while self.current_highest < goal {
 
-            self.spawn_population_in_new_thread();
+            if self.number_of_child_threads < self.max_child_threads {
+                for _ in 0..(self.max_child_threads - self.number_of_child_threads) {
+                    self.spawn_population_in_new_thread();
+                }
+            }
 
             let cloned_population = self.main_population.clone();
             self.main_population = run_iterations(cloned_population, 100, &self.data, &operations, self.score_function);
 
-            let result = self.agent_receiver.try_recv();
-            if result.is_ok() {
-                for (score, agent) in result.ok().unwrap() {
-                    self.main_population.insert(score, agent);
+            let mut check_messages = true;
+            while check_messages {
+                let result = self.agent_receiver.try_recv();
+                if result.is_ok() {
+                    for (score, agent) in result.ok().unwrap() {
+                        self.main_population.insert(score, agent);
+                    }
+                    self.number_of_child_threads -= 1;
+                } else {
+                    check_messages = false;
                 }
             }
 
@@ -118,7 +132,7 @@ Data: Clone + Send + 'static
         ]
     }
 
-    fn spawn_population_in_new_thread(&self) {
+    fn spawn_population_in_new_thread(&mut self) {
         let initial_population_size = self.initial_population_size;
         let number_of_genes = self.number_of_genes;
         let data = self.data.clone();
@@ -132,5 +146,7 @@ Data: Clone + Send + 'static
             let population = cull_lowest_agents(population, 0.5, 1);
             tx.send(population.get_agents().clone()).unwrap();
         });
+
+        self.number_of_child_threads += 1;
     }
 }
