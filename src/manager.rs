@@ -34,8 +34,9 @@ use std::sync::mpsc::{Sender, Receiver};
 
 pub struct Manager <Gene, Data>
 where
-Gene: 'static,
-Data: 'static
+Standard: Distribution<Gene>,
+Gene: Clone + Hash + Send + 'static,
+Data: Clone + Send + 'static
 {
     score_function: ScoreFunction<Gene, Data>,
     main_population: Population<Gene>,
@@ -47,7 +48,8 @@ Data: 'static
     agent_sender: Sender<BTreeMap<isize, Agent<Gene>>>,
     agent_receiver: Receiver<BTreeMap<isize, Agent<Gene>>>,
     number_of_child_threads: u8,
-    max_child_threads: u8
+    max_child_threads: u8,
+    operations: Vec<Operation<Gene, Data>>
 }
 
 impl <Gene, Data> Manager <Gene, Data>
@@ -61,6 +63,13 @@ Data: Clone + Send + 'static
 
         let (tx, rx) = channel::<BTreeMap<isize, Agent<Gene>>>();
 
+        let operations = vec![
+            Operation::new(OperationType::Mutate, Selection::new(SelectionType::RandomAny, 0.1)),
+            Operation::new(OperationType::Crossover, Selection::new(SelectionType::HighestScore, 0.2)),
+            Operation::new(OperationType::Crossover, Selection::new(SelectionType::RandomAny, 0.2)),
+            Operation::new(OperationType::Cull, Selection::new(SelectionType::LowestScore, 0.1)),
+        ];
+
         Self {
             score_function: score_function,
             main_population: Population::new_empty(false),
@@ -72,7 +81,8 @@ Data: Clone + Send + 'static
             agent_sender: tx,
             agent_receiver: rx,
             number_of_child_threads: 0,
-            max_child_threads: 3
+            max_child_threads: 3,
+            operations: operations
         }
     }
 
@@ -87,8 +97,6 @@ Data: Clone + Send + 'static
 
     pub fn run(&mut self, goal: isize) {
         self.main_population = Population::new(self.initial_population_size, self.number_of_genes, false, &self.data, self.score_function);
-        
-        let operations = self.get_operations();
 
         while self.current_highest < goal {
 
@@ -99,7 +107,7 @@ Data: Clone + Send + 'static
             }
 
             let cloned_population = self.main_population.clone();
-            self.main_population = run_iterations(cloned_population, 100, &self.data, &operations, self.score_function);
+            self.main_population = run_iterations(cloned_population, 100, &self.data, &self.operations, self.score_function);
 
             let mut check_messages = true;
             while check_messages {
@@ -123,21 +131,12 @@ Data: Clone + Send + 'static
         return &self.main_population;
     }
 
-    fn get_operations(&self) -> Vec<Operation<Gene, Data>> {
-        vec![
-            Operation::with_values(Selection::with_values(SelectionType::RandomAny, 0.1, 1), OperationType::Mutate, 25, 1),
-            Operation::with_values(Selection::with_values(SelectionType::HighestScore, 0.2, 1), OperationType::Crossover, 25, 1),
-            Operation::with_values(Selection::with_values(SelectionType::RandomAny, 0.5, 1), OperationType::Crossover, 25, 1),
-            Operation::with_values(Selection::with_values(SelectionType::LowestScore, 0.02, 1), OperationType::Cull, 25, 1)
-        ]
-    }
-
     fn spawn_population_in_new_thread(&mut self) {
         let initial_population_size = self.initial_population_size;
         let number_of_genes = self.number_of_genes;
         let data = self.data.clone();
         let score_function = self.score_function;
-        let operations = self.get_operations();
+        let operations = self.operations.clone();
 
         let tx = self.agent_sender.clone();
 

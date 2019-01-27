@@ -56,6 +56,14 @@ impl Selection {
         }
     }
 
+    pub fn new(selection_type: SelectionType, proportion: f64) -> Self {
+        Self {
+            selection_type: selection_type,
+            proportion: proportion,
+            preferred_minimum: 1
+        }
+    }
+
     pub fn selection_type(&self) -> SelectionType {
         self.selection_type
     }
@@ -117,6 +125,20 @@ Data: Clone + Send + 'static
             operation_type: operation_type,
             offset: offset,
             threads: threads,
+            gene: PhantomData,
+            data: PhantomData
+        }
+    }
+
+    pub fn new(
+        operation_type: OperationType,
+        selection: Selection
+    ) -> Self {
+        Self {
+            selection: selection,
+            operation_type: operation_type,
+            offset: 25,
+            threads: 1,
             gene: PhantomData,
             data: PhantomData
         }
