@@ -119,9 +119,9 @@ Now run your code with ```cargo run```.
 
 You'll get a list of the top scores in the population, along with sets of 5 integers for each, which represent their 'genes'.
 
-Have a look in the examples directory of this library. You'll find the code we've run through in simplest.rs.
+Have a look in the examples directory of this library.
 
 ## License
 
-Aristeia is licensed under the Apache license version 2.0.
+Aristeia is licensed under the Apache License, Version 2.0.
 

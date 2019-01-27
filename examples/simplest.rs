@@ -14,43 +14,20 @@
 
 extern crate aristeia;
 
-use aristeia::evolution::run_iterations;
 use aristeia::agent::Agent;
-use aristeia::population::Population;
-use aristeia::operations::{
-    Operation,
-    OperationType,
-    Selection,
-    SelectionType,
-};
+use aristeia::manager::Manager;
 
 fn main() {
 
-    let operations = vec![
-        Operation::with_values(
-            Selection::with_values(SelectionType::RandomAny, 0.1, 1),
-            OperationType::Mutate,
-            25,
-            1),
-        Operation::with_values(
-            Selection::with_values(SelectionType::HighestScore, 0.1, 1),
-            OperationType::Crossover,
-            25,
-            1),
-        Operation::with_values(
-            Selection::with_values(SelectionType::LowestScore, 0.1, 1),
-            OperationType::Cull,
-            25,
-            1)
-    ];
+    let mut manager = Manager::new(get_score_index, 0);
+    manager.set_number_of_genes(5, false);
+    manager.run(1250);
+    let agents = manager.get_population().get_agents();
 
-    let population = Population::new(100, 5, false, &0, get_score_index);
-    let population = run_iterations(population, 50, &0, &operations, get_score_index);
-
-    println!("Population: {}", population.len());
+    println!("Population: {}", agents.len());
 
     let mut viewing = 10;
-    for (score_index, agent) in population.get_agents().iter().rev() {
+    for (score_index, agent) in agents.iter().rev() {
         println!("Score: {}", score_index);
         println!("{:?}", agent.get_genes());
 
