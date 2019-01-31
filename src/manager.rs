@@ -95,6 +95,14 @@ Data: Clone + Send + 'static
         self.initial_population_size = size;
     }
 
+    pub fn set_operations(&mut self, operations: Vec<Operation<Gene, Data>>) {
+        self.operations = operations;
+    }
+
+    pub fn set_max_child_threads(&mut self, max_number: u8) {
+        self.max_child_threads = max_number;
+    }
+
     pub fn run(&mut self, goal: isize) {
         self.main_population = Population::new(self.initial_population_size, self.number_of_genes, false, &self.data, self.score_function);
 
