@@ -20,7 +20,7 @@ use aristeia::manager::Manager;
 fn main() {
 
     let mut manager = Manager::new(get_score_index, 0);
-    manager.set_number_of_genes(5, false);
+    manager.set_number_of_genes(5, true);
     manager.run(1250);
     let agents = manager.get_population().get_agents();
 

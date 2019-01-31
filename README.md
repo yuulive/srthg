@@ -10,10 +10,6 @@ Aristeia provides the generic logic required for genetic algorithms, allowing yo
 
 It is still at an early stage so expect the API to change but also for improvements to be made.
 
-There is currently a very basic approach to providing threading at this point. 
-
-The API requires defining values that, without guidance or experimentation, would be hard to determine. But improving this is precisely something that's in scope for work coming up. And guidance can be found below and by looking at examples in the examples directory of this library.
-
 ## Getting started
 
 Create a new project and add the following to the cargo.toml file:
@@ -23,80 +19,50 @@ Create a new project and add the following to the cargo.toml file:
 aristeia = "0.1.1"
 ```
 
-In main.rs, start off with the following to get all the types you'll need for this example:
+In main.rs, start off with the following:
 
 ```rust
 extern crate aristeia;
 
-use aristeia::evolution::run_iterations;
 use aristeia::agent::Agent;
-use aristeia::population::Population;
-use aristeia::operations::{
-    Operation,
-    OperationType,
-    Selection,
-    SelectionType,
-};
+use aristeia::manager::Manager;
 ```
 
-Now, inside you main() function, delete the default code in there and add the following to specify what should happen for each
-generation as your algorithm evolves:
+In the above code, we import the Manager, which will run the genetic algorithm system. We also import Agent so that we can investigate the 'fittest' set of genes after running.
+
+Now, inside you main() function, delete the default code in there and let's add the code to create and run the manager:
 
 ```rust
-    let operations = vec![
-        Operation::with_values(
-            Selection::with_values(SelectionType::RandomAny, 0.1, 1),
-            OperationType::Mutate,
-            25,
-            1),
-        Operation::with_values(
-            Selection::with_values(SelectionType::HighestScore, 0.1, 1),
-            OperationType::Crossover,
-            25,
-            1),
-        Operation::with_values(
-            Selection::with_values(SelectionType::LowestScore, 0.1, 1),
-            OperationType::Cull,
-            25,
-            1)
-    ];
+let mut manager = Manager::new(get_score_index, 0);
+manager.set_number_of_genes(5, true);
+manager.run(1250);;
 ```
 
-So what have we asked for above? First of all, there will be 3 operations per generation. 
+We've created a new manager, passing in a function called get_score_index which is what determines the fitness score of our agents. We define this function later in this example. We also pass in 0 as the second argument, which is for additional data. We aren't using the data parameter in this example, but you can look at some of examples in this library to see other ways that data can be used.
 
-1st - Mutation (hence ```OperationType::Mutate```), which will be done on a random subset of the population (hence ```SelectionType::RandomAny``` in the Selection). 
-2nd - Crossover (```OperationType::Crossover```), which will be done on a proportion of the highest score population (```SelectionType::HighestScore```).
-3rd - Cull (```OperationType::Cull```), where the lowest scored individuals will be culled (```SelectionType::LowestScore```).
+We also set the number of genes that each agent should have. The second argument is for saying whether agents have to have that number of genes, or whether it can vary a bit if we aren't getting any good scores. However, that 'varying' functionality has not yet been implemented.
 
-I'll leave you to look at the function docs for what the various other arguments used are all about rather than go into that detail here.
+Lastly, we run the system, specifying a score that the highest in the population must be greater than in order to complete the run. If we were to set that score too high, the system would currently run forever (until you press Ctrl+C to stop the program).
 
-Below where you've defined those operations, let's create the population:
+Once the run is complete, we'll want to get the agents and see what genes they had. Below your code for running the manager, add the following:
 
 ```rust
-let population = Population::new(100, 5, false, &0, get_score_index);
+let agents = manager.get_population().get_agents();
 ```
 
-The key thing is we're creating a population of 100 individuals (named agents in this library) and each will have 5 genes. That last argument is also important, that's specifying a function we will use to score the set of genes that an agent has. We'll get back to that later.
-
-First though, we'll finish the main function, add the call to run iterations, this where the library does all its work:
+To finish off the main function, we'll want to see what the highest scored agents are. Add this:
 
 ```rust
-let population = run_iterations(population, 50, &0, &operations, get_score_index);
-```
+let mut viewing = 10;
+for (score_index, agent) in population.get_agents().iter().rev() {
+    println!("Score: {}", score_index);
+    println!("{:?}", agent.get_genes());
 
-Following the above, the population would have been through the operations we defined 50 times. To finish off the main function, we'll want to see what the highest scored (or to use evolution-based terms, the 'fittest') agents are. Add this:
-
-```rust
-    let mut viewing = 10;
-    for (score_index, agent) in population.get_agents().iter().rev() {
-        println!("Score: {}", score_index);
-        println!("{:?}", agent.get_genes());
-
-        viewing -= 1;
-        if viewing == 0 {
-            break;
-        }
+    viewing -= 1;
+    if viewing == 0 {
+        break;
     }
+}
 ```
 
 So the last thing to do is add that scoring function. We're just wanting a quick example here, so we're just going to make the genes 'u8' (unsigned 8-bit integers), and the higher they are, the higher the score.
@@ -119,7 +85,7 @@ Now run your code with ```cargo run```.
 
 You'll get a list of the top scores in the population, along with sets of 5 integers for each, which represent their 'genes'.
 
-Have a look in the examples directory of this library.
+Have a look in the examples directory of this library. The example described above can be found in simplest.rs.
 
 ## License
 
