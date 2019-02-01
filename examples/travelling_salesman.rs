@@ -96,29 +96,21 @@ pub fn main() {
         // We will mutate a random selection of 10% (that's the 0.1 in the Selection) of the population, but also a minimum of 1.
         Operation::with_values(
             Selection::with_values(SelectionType::RandomAny, 0.1, 1),
-            OperationType::Mutate,
-            25,
-            1),
+            OperationType::Mutate),
         // We will get highest scored 20% and randomly pair them, creating children with crossed over genes out of those.
         Operation::with_values(
             Selection::with_values(SelectionType::HighestScore, 0.2, 1),
-            OperationType::Crossover,
-            25,
-            1),
+            OperationType::Crossover),
         // We will take a random set of 50% of the population, randomly pair them and produce children with crossed over
         // genes out of those.
         Operation::with_values(
             Selection::with_values(SelectionType::RandomAny, 0.5, 1),
-            OperationType::Crossover,
-            25,
-            1),
+            OperationType::Crossover),
         // We will take the lowest 2% of the population and get rid of them. Note that just like in the previous operations,
         // the minimum is set to 1. So there'll always be at least 1 agent culled.
         Operation::with_values(
             Selection::with_values(SelectionType::LowestScore, 0.02, 1),
-            OperationType::Cull,
-            25,
-            1)
+            OperationType::Cull)
     ];
 
     let mut score_provider = ScoreProvider::new(get_score_index, 25);
