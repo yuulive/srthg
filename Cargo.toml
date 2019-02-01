@@ -6,6 +6,7 @@ description = "An evolutionary computation library."
 repository = "https://github.com/brendancox/aristeia"
 readme = "README.md"
 license = "Apache-2.0"
+keywords = ["heuristics", "genetic", "algorithm"]
 
 [dependencies]
 rand = "0.6"
