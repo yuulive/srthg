@@ -1,6 +1,6 @@
 [package]
 name = "aristeia"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Brendan Cox <brendancox21@gmail.com>"]
 description = "An evolutionary computation library."
 repository = "https://github.com/brendancox/aristeia"
