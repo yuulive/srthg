@@ -21,7 +21,7 @@ use rand::{
 };
 use std::thread;
 use std::marker::{Send, PhantomData};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 pub type ScoreFunction<Gene, Data> = fn(&Agent<Gene>, &Data) -> isize;
 
@@ -151,6 +151,48 @@ Data: Clone + Send + 'static
             OperationType::Crossover => crossover_agents(population, self.selection, data, get_score_index, self.offset, self.threads),
             OperationType::Cull => cull_agents(population, self.selection)
         }
+    }
+}
+
+pub struct ScoreProvider <Gene, Data>
+where
+Standard: Distribution<Gene>,
+Gene: Clone + Hash + Send + 'static,
+Data: Clone + Send + 'static
+{
+    scoring_function: ScoreFunction<Gene, Data>,
+    offset: isize,
+    score_cache: HashMap<u64, isize>
+}
+
+impl <Gene, Data> ScoreProvider <Gene, Data>
+where
+Standard: Distribution<Gene>,
+Gene: Clone + Hash + Send + 'static,
+Data: Clone + Send + 'static
+{
+    pub fn new(scoring_function: ScoreFunction<Gene, Data>, offset: isize) -> Self {
+        Self {
+            scoring_function: scoring_function,
+            offset: offset,
+            score_cache: HashMap::new()
+        }
+    }
+
+    pub fn get_score(&mut self, agent: &Agent<Gene>, data: &Data) -> isize {
+        let hash = agent.get_hash();
+
+        let mut rng = rand::thread_rng();
+        let offset = rng.gen_range(-self.offset, self.offset);
+
+        if self.score_cache.contains_key(&hash) {
+            return self.score_cache[&hash] + offset;
+        }
+
+        let score = (self.scoring_function)(agent, data);
+        self.score_cache.insert(hash, score);
+
+        score + offset
     }
 }
 
