@@ -38,7 +38,6 @@ Standard: Distribution<Gene>,
 Gene: Clone + Hash + Send + 'static,
 Data: Clone + Send + 'static
 {
-    score_function: ScoreFunction<Gene, Data>,
     main_population: Population<Gene>,
     data: Data,
     number_of_genes: usize,
@@ -73,7 +72,6 @@ Data: Clone + Send + 'static
         ];
 
         Self {
-            score_function: score_function,
             main_population: Population::new_empty(false),
             data: data,
             number_of_genes: 10,
@@ -112,7 +110,7 @@ Data: Clone + Send + 'static
     }
 
     pub fn run(&mut self, goal: isize) {
-        self.main_population = Population::new(self.initial_population_size, self.number_of_genes, false, &self.data, self.score_function);
+        self.main_population = Population::new(self.initial_population_size, self.number_of_genes, false, &self.data, &mut self.score_provider);
 
         while self.current_highest < goal {
 
@@ -151,7 +149,6 @@ Data: Clone + Send + 'static
         let initial_population_size = self.initial_population_size;
         let number_of_genes = self.number_of_genes;
         let data = self.data.clone();
-        let score_function = self.score_function;
         let operations = self.operations.clone();
         let iterations_per_cycle = self.iterations_per_cycle;
         let mut score_provider = self.score_provider.clone();
@@ -159,7 +156,7 @@ Data: Clone + Send + 'static
         let tx = self.agent_sender.clone();
 
         thread::spawn(move || {
-            let population = run_iterations(Population::new(initial_population_size, number_of_genes, false, &data, score_function), iterations_per_cycle, &data, &operations, &mut score_provider);
+            let population = run_iterations(Population::new(initial_population_size, number_of_genes, false, &data, &mut score_provider), iterations_per_cycle, &data, &operations, &mut score_provider);
             let population = cull_lowest_agents(population, 0.5, 1);
             tx.send(population.get_agents().clone()).unwrap();
         });

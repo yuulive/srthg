@@ -470,7 +470,7 @@ mod tests {
     fn selection_random_any_returns_correct_proportion() {
         let selection = Selection::with_values(SelectionType::RandomAny, 0.25, 0);
 
-        let population = Population::new(8, 1, false, &0, get_score_index);
+        let population = Population::new(8, 1, false, &0, &mut ScoreProvider::new(get_score_index, 25));
 
         let agent_map = selection.agents(&population);
         assert_eq!(2, agent_map.len());
@@ -480,7 +480,7 @@ mod tests {
     fn selection_highest_score_returns_highest() {
         let selection = Selection::with_values(SelectionType::HighestScore, 0.25, 0);
 
-        let population = Population::new(8, 1, false, &0, get_score_index);
+        let population = Population::new(8, 1, false, &0, &mut ScoreProvider::new(get_score_index, 25));
 
         let agent_map = selection.agents(&population);
         assert_eq!(2, agent_map.len());
@@ -496,7 +496,7 @@ mod tests {
     fn selection_lowest_score_returns_lowest() {
         let selection = Selection::with_values(SelectionType::LowestScore, 0.25, 0);
 
-        let population = Population::new(8, 1, false, &0, get_score_index);
+        let population = Population::new(8, 1, false, &0, &mut ScoreProvider::new(get_score_index, 25));
 
         let agent_map = selection.agents(&population);
         assert_eq!(2, agent_map.len());

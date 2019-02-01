@@ -121,14 +121,16 @@ pub fn main() {
             1)
     ];
 
+    let mut score_provider = ScoreProvider::new(get_score_index, 25);
+
     // Create a population of 20 agents which each have a set of 10 randomly chosen genes.
     // We need to pass in the data as this is used for scoring the agents. 
     // We also pass in a reference to the scoring function defined towards the end of this file.
-    let population = Population::new(20, 10, false, &data, get_score_index);
+    let population = Population::new(20, 10, false, &data, &mut score_provider);
 
     // Now we run 50 iterations (or generations) on this population, meaning we run the operations we defined above
     // 50 times over. Again, we need the data and scoring function references as these are used for scoring new agents.
-    let population = run_iterations(population, 50, &data, &operations, &mut ScoreProvider::new(get_score_index, 25));
+    let population = run_iterations(population, 50, &data, &operations, &mut score_provider);
 
     let agents = population.get_agents();
 

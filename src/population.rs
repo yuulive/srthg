@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use super::agent::Agent;
-use super::operations::ScoreFunction;
+use super::operations::ScoreProvider;
 use std::collections::{BTreeMap, HashSet};
 use std::hash::Hash;
 use rand::{
@@ -44,17 +44,17 @@ impl <Gene> Population <Gene>{
         number_of_genes: usize,
         unique: bool,
         data: &Data,
-        get_score_index: ScoreFunction<Gene, Data>,
+        score_provider: &mut ScoreProvider<Gene, Data>,
     ) -> Population<Gene> 
     where
     Standard: Distribution<Gene>,
-    Gene: Hash
+    Gene: Hash + Clone
     {
         let mut population = Population::new_empty(unique);
         for _ in 0..start_size {
             let agent = Agent::with_genes(number_of_genes);
             if population.will_accept(&agent) {
-                let mut score = get_score_index(&agent, &data);
+                let mut score = score_provider.get_score(&agent, &data);
 
                 loop {
                     if score == 0 {
@@ -169,7 +169,7 @@ mod tests {
 
     #[test]
     fn new_with_false_unique() {
-        let mut population = Population::new(5, 6, false, &0, get_score_index);
+        let mut population = Population::new(5, 6, false, &0, &mut ScoreProvider::new(get_score_index, 25));
         assert_eq!(5, population.len());
         assert_eq!(5, population.get_agents().len());
         assert_eq!(5, population.get_scores().len());
@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn new_with_true_unique() {
-        let mut population = Population::new(5, 6, true, &0, get_score_index);
+        let mut population = Population::new(5, 6, true, &0, &mut ScoreProvider::new(get_score_index, 25));
         assert_eq!(5, population.len());
         assert_eq!(5, population.get_agents().len());
         assert_eq!(5, population.get_scores().len());
@@ -227,7 +227,7 @@ mod tests {
 
     #[test]
     fn cull_all_below() {
-        let mut population = Population::new(5, 6, true, &0, get_score_index);
+        let mut population = Population::new(5, 6, true, &0, &mut ScoreProvider::new(get_score_index, 25));
         assert_eq!(5, population.len());
         assert_eq!(5, population.get_agents().len());
         assert_eq!(5, population.get_scores().len());
