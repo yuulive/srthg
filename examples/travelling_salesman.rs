@@ -43,6 +43,7 @@ use aristeia::operations::{
     OperationType,
     Selection,
     SelectionType,
+    ScoreProvider
 };
 
 // These are cities in the North Island of New Zealand.
@@ -127,7 +128,7 @@ pub fn main() {
 
     // Now we run 50 iterations (or generations) on this population, meaning we run the operations we defined above
     // 50 times over. Again, we need the data and scoring function references as these are used for scoring new agents.
-    let population = run_iterations(population, 50, &data, &operations, get_score_index);
+    let population = run_iterations(population, 50, &data, &operations, &mut ScoreProvider::new(get_score_index, 25));
 
     let agents = population.get_agents();
 

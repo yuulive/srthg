@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::operations::ScoreFunction;
+use super::operations::{ScoreFunction, ScoreProvider};
 use super::population::Population;
 use super::evolution::run_iterations;
 use rand::{
@@ -112,6 +112,8 @@ Data: Clone + Send + 'static
     pub fn run(&mut self, goal: isize) {
         self.main_population = Population::new(self.initial_population_size, self.number_of_genes, false, &self.data, self.score_function);
 
+        let mut score_provider = ScoreProvider::new(self.score_function, 25);
+
         while self.current_highest < goal {
 
             if self.number_of_child_threads < self.max_child_threads {
@@ -121,7 +123,7 @@ Data: Clone + Send + 'static
             }
 
             let cloned_population = self.main_population.clone();
-            self.main_population = run_iterations(cloned_population, self.iterations_per_cycle, &self.data, &self.operations, self.score_function);
+            self.main_population = run_iterations(cloned_population, self.iterations_per_cycle, &self.data, &self.operations, &mut score_provider);
 
             let mut check_messages = true;
             while check_messages {
@@ -152,11 +154,12 @@ Data: Clone + Send + 'static
         let score_function = self.score_function;
         let operations = self.operations.clone();
         let iterations_per_cycle = self.iterations_per_cycle;
+        let mut score_provider = ScoreProvider::new(self.score_function, 25);
 
         let tx = self.agent_sender.clone();
 
         thread::spawn(move || {
-            let population = run_iterations(Population::new(initial_population_size, number_of_genes, false, &data, score_function), iterations_per_cycle, &data, &operations, score_function);
+            let population = run_iterations(Population::new(initial_population_size, number_of_genes, false, &data, score_function), iterations_per_cycle, &data, &operations, &mut score_provider);
             let population = cull_lowest_agents(population, 0.5, 1);
             tx.send(population.get_agents().clone()).unwrap();
         });

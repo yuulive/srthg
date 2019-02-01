@@ -19,7 +19,6 @@ use rand::{
     distributions::{Distribution, Standard},
     Rng,
 };
-use std::thread;
 use std::marker::{Send, PhantomData};
 use std::collections::{BTreeMap, HashMap};
 
@@ -144,11 +143,11 @@ Data: Clone + Send + 'static
         }
     }
 
-    pub fn run (&self, population: Population<Gene>, data: &Data, get_score_index: ScoreFunction<Gene, Data>) -> Population<Gene>
+    pub fn run (&self, population: Population<Gene>, data: &Data, score_provider: &mut ScoreProvider<Gene, Data>) -> Population<Gene>
     {
         match self.operation_type {
-            OperationType::Mutate => mutate_agents(population, self.selection, data, get_score_index, self.offset, self.threads),
-            OperationType::Crossover => crossover_agents(population, self.selection, data, get_score_index, self.offset, self.threads),
+            OperationType::Mutate => mutate_agents(population, self.selection, data, score_provider, self.threads),
+            OperationType::Crossover => crossover_agents(population, self.selection, data, score_provider, self.threads),
             OperationType::Cull => cull_agents(population, self.selection)
         }
     }
@@ -157,8 +156,7 @@ Data: Clone + Send + 'static
 pub struct ScoreProvider <Gene, Data>
 where
 Standard: Distribution<Gene>,
-Gene: Clone + Hash + Send + 'static,
-Data: Clone + Send + 'static
+Gene: Clone + Hash
 {
     scoring_function: ScoreFunction<Gene, Data>,
     offset: isize,
@@ -168,8 +166,7 @@ Data: Clone + Send + 'static
 impl <Gene, Data> ScoreProvider <Gene, Data>
 where
 Standard: Distribution<Gene>,
-Gene: Clone + Hash + Send + 'static,
-Data: Clone + Send + 'static
+Gene: Clone + Hash
 {
     pub fn new(scoring_function: ScoreFunction<Gene, Data>, offset: isize) -> Self {
         Self {
@@ -200,8 +197,7 @@ fn mutate_agents<Gene, Data>(
     mut population: Population<Gene>,
     selection: Selection,
     data: &Data,
-    get_score_index: ScoreFunction<Gene, Data>,
-    offset: isize,
+    score_provider: &mut ScoreProvider<Gene, Data>,
     threads: usize
 ) -> Population<Gene>
 where
@@ -214,26 +210,10 @@ Data: Clone + Send + 'static
         threads
     );
 
-    if threads > 1 {
-        let mut handles = Vec::new();
-
-        for agents in groups {           
-            let data_copy = data.clone();
-            handles.push(thread::spawn(move || get_mutated_agents(agents, &data_copy, get_score_index, offset)));
-        }
-
-        for handle in handles {
-            let children = handle.join().unwrap();
-            for (score_index, agent) in children {
-                population.insert(score_index, agent);
-            }
-        }
-    } else {
-        for agents in groups {
-            let children = get_mutated_agents(agents, data, get_score_index, offset);
-            for (score_index, agent) in children {
-                population.insert(score_index, agent);
-            }
+    for agents in groups {
+        let children = get_mutated_agents(agents, data, score_provider);
+        for (score_index, agent) in children {
+            population.insert(score_index, agent);
         }
     }
 
@@ -244,8 +224,7 @@ fn crossover_agents<Gene, Data>(
     mut population: Population<Gene>,
     selection: Selection,
     data: &Data,
-    get_score_index: ScoreFunction<Gene, Data>,
-    offset: isize,
+    score_provider: &mut ScoreProvider<Gene, Data>,
     threads: usize
 ) -> Population<Gene>
 where
@@ -260,28 +239,10 @@ Data: Clone + Send + 'static
         threads
     );
 
-    if threads > 1 {
-        let mut handles = Vec::new();
-        {       
-            for pairs in groups {           
-                let data_copy = data.clone();
-                handles.push(thread::spawn(move || create_children_from_crossover(pairs, &data_copy, get_score_index, offset)));
-            }
-        }
-
-        for handle in handles {
-            let children = handle.join().unwrap();
-            for (score_index, agent) in children {
-                population.insert(score_index, agent);
-            }
-        }
-    } else {
-
-        for pairs in groups { 
-            let children = create_children_from_crossover(pairs, data, get_score_index, offset);
-            for (score_index, agent) in children {
-                population.insert(score_index, agent);
-            }
+    for pairs in groups { 
+        let children = create_children_from_crossover(pairs, data, score_provider);
+        for (score_index, agent) in children {
+            population.insert(score_index, agent);
         }
     }
 
@@ -310,17 +271,16 @@ fn cull_agents<Gene>(
 fn get_mutated_agents<Gene, Data>(
     agents: Vec<Agent<Gene>>,
     data: &Data,
-    get_score_index: ScoreFunction<Gene, Data>,
-    offset: isize
+    score_provider: &mut ScoreProvider<Gene, Data>,
 ) -> Vec<(isize, Agent<Gene>)>
 where Standard: Distribution<Gene>,
-Gene: Clone + Hash
+Gene: Clone + Hash + Send,
+Data: Clone
 {
-    let mut rng = rand::thread_rng();
     let mut children = Vec::new();
     for mut agent in agents {
         agent.mutate();
-        let score_index = get_score_index(&agent, data) + rng.gen_range(-offset, offset);
+        let score_index = score_provider.get_score(&agent, data);
         children.push((score_index, agent));
     }
     children
@@ -329,17 +289,16 @@ Gene: Clone + Hash
 fn create_children_from_crossover<Gene, Data>(
     pairs: Vec<(Agent<Gene>, Agent<Gene>)>,
     data: &Data,
-    get_score_index: ScoreFunction<Gene, Data>,
-    offset: isize
+    score_provider: &mut ScoreProvider<Gene, Data>,
 ) -> Vec<(isize, Agent<Gene>)>
-where 
+where
+Standard: Distribution<Gene>,
 Gene: Clone + Hash
 {
-    let mut rng = rand::thread_rng();
     let mut children = Vec::new();
     for (parent_one, parent_two) in pairs {
         let child = crossover(&parent_one, &parent_two);
-        let score_index = get_score_index(&child, data) + rng.gen_range(-offset, offset);;
+        let score_index = score_provider.get_score(&child, data);
         children.push((score_index, child));
     }
     return children;
