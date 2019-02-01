@@ -49,7 +49,8 @@ Data: Clone + Send + 'static
     agent_receiver: Receiver<BTreeMap<isize, Agent<Gene>>>,
     number_of_child_threads: u8,
     max_child_threads: u8,
-    operations: Vec<Operation<Gene, Data>>
+    operations: Vec<Operation<Gene, Data>>,
+    iterations_per_cycle: usize
 }
 
 impl <Gene, Data> Manager <Gene, Data>
@@ -82,7 +83,8 @@ Data: Clone + Send + 'static
             agent_receiver: rx,
             number_of_child_threads: 0,
             max_child_threads: 3,
-            operations: operations
+            operations: operations,
+            iterations_per_cycle: 100
         }
     }
 
@@ -103,6 +105,10 @@ Data: Clone + Send + 'static
         self.max_child_threads = max_number;
     }
 
+    pub fn set_iterations_per_cycle(&mut self, number: usize) {
+        self.iterations_per_cycle = number;
+    }
+
     pub fn run(&mut self, goal: isize) {
         self.main_population = Population::new(self.initial_population_size, self.number_of_genes, false, &self.data, self.score_function);
 
@@ -115,7 +121,7 @@ Data: Clone + Send + 'static
             }
 
             let cloned_population = self.main_population.clone();
-            self.main_population = run_iterations(cloned_population, 100, &self.data, &self.operations, self.score_function);
+            self.main_population = run_iterations(cloned_population, self.iterations_per_cycle, &self.data, &self.operations, self.score_function);
 
             let mut check_messages = true;
             while check_messages {
@@ -145,11 +151,12 @@ Data: Clone + Send + 'static
         let data = self.data.clone();
         let score_function = self.score_function;
         let operations = self.operations.clone();
+        let iterations_per_cycle = self.iterations_per_cycle;
 
         let tx = self.agent_sender.clone();
 
         thread::spawn(move || {
-            let population = run_iterations(Population::new(initial_population_size, number_of_genes, false, &data, score_function), 100, &data, &operations, score_function);
+            let population = run_iterations(Population::new(initial_population_size, number_of_genes, false, &data, score_function), iterations_per_cycle, &data, &operations, score_function);
             let population = cull_lowest_agents(population, 0.5, 1);
             tx.send(population.get_agents().clone()).unwrap();
         });
