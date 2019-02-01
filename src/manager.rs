@@ -50,7 +50,8 @@ Data: Clone + Send + 'static
     number_of_child_threads: u8,
     max_child_threads: u8,
     operations: Vec<Operation<Gene, Data>>,
-    iterations_per_cycle: usize
+    iterations_per_cycle: usize,
+    score_provider: ScoreProvider<Gene, Data>
 }
 
 impl <Gene, Data> Manager <Gene, Data>
@@ -84,7 +85,8 @@ Data: Clone + Send + 'static
             number_of_child_threads: 0,
             max_child_threads: 3,
             operations: operations,
-            iterations_per_cycle: 100
+            iterations_per_cycle: 100,
+            score_provider: ScoreProvider::new(score_function, 25)
         }
     }
 
@@ -112,8 +114,6 @@ Data: Clone + Send + 'static
     pub fn run(&mut self, goal: isize) {
         self.main_population = Population::new(self.initial_population_size, self.number_of_genes, false, &self.data, self.score_function);
 
-        let mut score_provider = ScoreProvider::new(self.score_function, 25);
-
         while self.current_highest < goal {
 
             if self.number_of_child_threads < self.max_child_threads {
@@ -123,7 +123,7 @@ Data: Clone + Send + 'static
             }
 
             let cloned_population = self.main_population.clone();
-            self.main_population = run_iterations(cloned_population, self.iterations_per_cycle, &self.data, &self.operations, &mut score_provider);
+            self.main_population = run_iterations(cloned_population, self.iterations_per_cycle, &self.data, &self.operations, &mut self.score_provider);
 
             let mut check_messages = true;
             while check_messages {
@@ -154,7 +154,7 @@ Data: Clone + Send + 'static
         let score_function = self.score_function;
         let operations = self.operations.clone();
         let iterations_per_cycle = self.iterations_per_cycle;
-        let mut score_provider = ScoreProvider::new(self.score_function, 25);
+        let mut score_provider = self.score_provider.clone();
 
         let tx = self.agent_sender.clone();
 

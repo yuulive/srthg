@@ -153,6 +153,7 @@ Data: Clone + Send + 'static
     }
 }
 
+#[derive(Clone)]
 pub struct ScoreProvider <Gene, Data>
 where
 Standard: Distribution<Gene>,
