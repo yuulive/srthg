@@ -18,6 +18,7 @@ use std::hash::Hash;
 use rand::{
     distributions::{Distribution, Standard},
     Rng,
+    prelude::ThreadRng
 };
 use std::marker::{Send, PhantomData};
 use std::collections::{BTreeMap, HashMap};
@@ -169,10 +170,9 @@ Gene: Clone + Hash
         }
     }
 
-    pub fn get_score(&mut self, agent: &Agent<Gene>, data: &Data) -> isize {
+    pub fn get_score(&mut self, agent: &Agent<Gene>, data: &Data, rng: &mut ThreadRng) -> isize {
         let hash = agent.get_hash();
 
-        let mut rng = rand::thread_rng();
         let offset = rng.gen_range(-self.offset, self.offset);
 
         if self.score_cache.contains_key(&hash) {
@@ -197,8 +197,10 @@ Standard: Distribution<Gene>,
 Gene: Clone + Hash + Send + 'static,
 Data: Clone + Send + 'static
 {
-    let children = get_mutated_agents(selection.agents(&population), data, score_provider);
-    for (score_index, agent) in children {
+    let children = get_mutated_agents(selection.agents(&population));
+    let mut rng = rand::thread_rng();
+    for agent in children {
+        let score_index = score_provider.get_score(&agent, data, &mut rng);
         population.insert(score_index, agent);
     }
 
@@ -247,21 +249,17 @@ fn cull_agents<Gene>(
     population
 }
 
-fn get_mutated_agents<Gene, Data>(
+fn get_mutated_agents<Gene>(
     agents: BTreeMap<isize, &Agent<Gene>>,
-    data: &Data,
-    score_provider: &mut ScoreProvider<Gene, Data>,
-) -> Vec<(isize, Agent<Gene>)>
+) -> Vec<Agent<Gene>>
 where Standard: Distribution<Gene>,
-Gene: Clone + Hash + Send,
-Data: Clone
+Gene: Clone + Hash + Send
 {
     let mut children = Vec::new();
     for (_, mut agent) in agents {
         let mut clone = agent.clone();
         clone.mutate();
-        let score_index = score_provider.get_score(&clone, data);
-        children.push((score_index, clone));
+        children.push(clone);
     }
     children
 }
@@ -276,9 +274,10 @@ Standard: Distribution<Gene>,
 Gene: Clone + Hash
 {
     let mut children = Vec::new();
+    let mut rng = rand::thread_rng();
     for (parent_one, parent_two) in pairs {
         let child = crossover(&parent_one, &parent_two);
-        let score_index = score_provider.get_score(&child, data);
+        let score_index = score_provider.get_score(&child, data, &mut rng);
         children.push((score_index, child));
     }
     return children;

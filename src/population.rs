@@ -51,10 +51,11 @@ impl <Gene> Population <Gene>{
     Gene: Hash + Clone
     {
         let mut population = Population::new_empty(unique);
+        let mut rng = rand::thread_rng();
         for _ in 0..start_size {
             let agent = Agent::with_genes(number_of_genes);
             if population.will_accept(&agent) {
-                let mut score = score_provider.get_score(&agent, &data);
+                let mut score = score_provider.get_score(&agent, &data, &mut rng);
 
                 loop {
                     if score == 0 {
