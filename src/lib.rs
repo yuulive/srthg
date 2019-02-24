@@ -19,3 +19,4 @@ pub mod operations;
 pub mod population;
 pub mod evolution;
 pub mod manager;
+pub mod fitness;

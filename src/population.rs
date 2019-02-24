@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use super::agent::Agent;
-use super::operations::{Score, ScoreProvider};
+use super::fitness::{Score, ScoreProvider};
 use std::collections::{BTreeMap, HashSet};
 use std::hash::Hash;
 use rand::{

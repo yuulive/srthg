@@ -14,9 +14,9 @@
 
 use super::population::Population;
 use super::operations::{
-    Operation,
-    ScoreProvider
+    Operation
 };
+use super::fitness::{ScoreProvider};
 use rand::{
     distributions::{Distribution, Standard}
 };
@@ -47,7 +47,7 @@ Data: Clone + Send + 'static
 mod tests {
     use super::*;
     use super::super::agent::Agent;
-    use super::super::operations::Score;
+    use super::super::fitness::Score;
 
     fn get_score_index(agent: &Agent<u8>, _data: &u8) -> Score {
         agent.get_genes()[0] as Score

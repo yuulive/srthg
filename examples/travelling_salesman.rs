@@ -42,9 +42,9 @@ use aristeia::operations::{
     Operation,
     OperationType,
     Selection,
-    SelectionType,
-    ScoreProvider
+    SelectionType
 };
+use aristeia::fitness::ScoreProvider;
 
 // These are cities in the North Island of New Zealand.
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]

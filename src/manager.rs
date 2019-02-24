@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::operations::{Score, ScoreFunction, ScoreProvider};
+use super::fitness::{Score, ScoreProvider, FitnessFunction};
 use super::population::Population;
 use super::evolution::run_iterations;
 use rand::{
@@ -60,7 +60,7 @@ Gene: Clone + Hash + Send + 'static,
 Data: Clone + Send + 'static
 {
 
-    pub fn new(score_function: ScoreFunction<Gene, Data>, data: Data) -> Self {
+    pub fn new(score_function: FitnessFunction<Gene, Data>, data: Data) -> Self {
 
         let (tx, rx) = channel::<BTreeMap<Score, Agent<Gene>>>();
 
