@@ -52,24 +52,31 @@ impl <Gene> Population <Gene> {
     {
         let mut population = Population::new_empty(unique);
         let mut rng = rand::thread_rng();
+        let mut agents = Vec::new();
         for _ in 0..start_size {
             let agent = Agent::with_genes(number_of_genes);
             if population.will_accept(&agent) {
-                let mut score = score_provider.get_score(&agent, &data, &mut rng);
-
-                loop {
-                    if score == 0 {
-                        break;
-                    }
-                    if population.contains_score(score) {
-                        score -= 1;
-                    } else {
-                        break;
-                    }
-                }
-
-                population.insert(score, agent);
+                agents.push(agent);
             }
+        }
+
+        let agents = score_provider.evaluate_scores(agents, &data);
+
+        for agent in agents {
+            let mut score = score_provider.get_score(&agent, &data, &mut rng);
+
+            loop {
+                if score == 0 {
+                    break;
+                }
+                if population.contains_score(score) {
+                    score -= 1;
+                } else {
+                    break;
+                }
+            }
+
+            population.insert(score, agent);
         }
 
         population

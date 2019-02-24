@@ -54,13 +54,33 @@ Gene: Clone + Hash
         }
     }
 
+    pub fn evaluate_scores(&mut self, agents: Vec<Agent<Gene>>, data: &Data) -> Vec<Agent<Gene>> {
+        let mut cached = Vec::new();
+        
+        for agent in agents {
+            let hash = agent.get_hash();
+            if self.score_cache.contains_key(&hash) {
+                cached.push(agent);
+            } else {
+                let result = (self.scoring_function)(&agent, data);
+                if result.is_ok() {
+                    self.score_cache.insert(hash, result.unwrap());
+                    cached.push(agent);
+                }
+                // else we simply skip the agent.
+            }
+        }
+
+        cached
+    }
+
     pub fn get_score(&mut self, agent: &Agent<Gene>, data: &Data, rng: &mut ThreadRng) -> Score {
         let hash = agent.get_hash();
 
         let offset = rng.gen_range(0, self.offset * 2);
 
         if self.score_cache.contains_key(&hash) {
-            let score = self.score_cache[&hash] + offset - self.offset;
+            let score = self.score_cache[&hash] + offset;
             if score <= self.offset {
                 return 0;
             } else {
