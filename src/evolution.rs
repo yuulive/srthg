@@ -47,10 +47,11 @@ Data: Clone + Send + 'static
 mod tests {
     use super::*;
     use super::super::agent::Agent;
-    use super::super::fitness::Score;
+    use super::super::fitness::{Score, ScoreError};
 
-    fn get_score_index(agent: &Agent<u8>, _data: &u8) -> Score {
-        agent.get_genes()[0] as Score
+    fn get_score_index(agent: &Agent<u8>, _data: &u8) -> Result<Score, ScoreError> {
+        let score = agent.get_genes()[0] as Score;
+        Ok(score)
     }
 
     #[test]

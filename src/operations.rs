@@ -366,9 +366,11 @@ fn rate_to_number(population: usize, rate: f64, preferred_minimum: usize) -> usi
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::fitness::ScoreError;
 
-    fn get_score_index(agent: &Agent<u8>, _data: &u8) -> Score {
-        agent.get_genes()[0] as Score
+    fn get_score_index(agent: &Agent<u8>, _data: &u8) -> Result<Score, ScoreError> {
+        let score = agent.get_genes()[0] as Score;
+        Ok(score)
     }
 
     #[test]

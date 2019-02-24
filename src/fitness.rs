@@ -6,9 +6,27 @@ use rand::{
     prelude::ThreadRng
 };
 use std::collections::HashMap;
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 
+#[derive(Debug)]
+pub struct ScoreError {
+    details: String
+}
 
-pub type FitnessFunction<Gene, Data> = fn(&Agent<Gene>, &Data) -> Score;
+impl Display for ScoreError {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.details)
+    }
+}
+
+impl Error for ScoreError {
+    fn description(&self) -> &str {
+        &self.details
+    }
+}
+
+pub type FitnessFunction<Gene, Data> = fn(&Agent<Gene>, &Data) -> Result<Score, ScoreError>;
 
 pub type Score = u64;
 
@@ -50,7 +68,7 @@ Gene: Clone + Hash
             }
         }
 
-        let score = (self.scoring_function)(agent, data);
+        let score = (self.scoring_function)(agent, data).unwrap();
         self.score_cache.insert(hash, score);
 
         let score = score + offset;

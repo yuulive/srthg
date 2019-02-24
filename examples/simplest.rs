@@ -16,6 +16,7 @@ extern crate aristeia;
 
 use aristeia::agent::Agent;
 use aristeia::manager::Manager;
+use aristeia::fitness::ScoreError;
 
 fn main() {
 
@@ -38,12 +39,12 @@ fn main() {
     }
 }
 
-fn get_score_index(agent: &Agent<u8>, _data: &u8) -> u64 {
+fn get_score_index(agent: &Agent<u8>, _data: &u8) -> Result<u64, ScoreError> {
     let mut score = 0;
 
     for gene in agent.get_genes() {
         score += *gene as u64;
     }
 
-    score
+    Ok(score)
 }

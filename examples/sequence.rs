@@ -31,6 +31,7 @@ use std::time::Instant;
 use aristeia::agent::{Agent};
 
 use aristeia::manager::Manager;
+use aristeia::fitness::ScoreError;
 
 
 #[derive(Clone, PartialEq, Hash)]
@@ -171,7 +172,7 @@ fn score_data(candidate: &Vec<u8>) -> u64 {
     (score * 10000.0) as u64
 }
 
-fn get_score_index(agent: &Agent<Gene>, data: &Vec<u8>) -> u64 {
+fn get_score_index(agent: &Agent<Gene>, data: &Vec<u8>) -> Result<u64, ScoreError> {
     let processed = get_processed_data(agent.get_genes(), data);
-    return score_data(&processed);
+    Ok(score_data(&processed))
 }

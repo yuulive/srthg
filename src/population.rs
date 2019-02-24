@@ -155,6 +155,7 @@ impl <Gene> Population <Gene> {
 #[cfg(test)]
 mod tests {
     use super::*;
+        use super::super::fitness::ScoreError;
 
     #[test]
     fn new_empty() {
@@ -164,8 +165,9 @@ mod tests {
         assert_eq!(0, population.get_scores().len());
     }
 
-    fn get_score_index(agent: &Agent<u8>, _data: &u8) -> Score {
-        agent.get_genes()[0] as Score
+    fn get_score_index(agent: &Agent<u8>, _data: &u8) -> Result<Score, ScoreError> {
+        let score = agent.get_genes()[0] as Score;
+        Ok(score)
     }
 
     #[test]
