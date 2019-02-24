@@ -38,11 +38,11 @@ fn main() {
     }
 }
 
-fn get_score_index(agent: &Agent<u8>, _data: &u8) -> isize {
+fn get_score_index(agent: &Agent<u8>, _data: &u8) -> u64 {
     let mut score = 0;
 
     for gene in agent.get_genes() {
-        score += *gene as isize;
+        score += *gene as u64;
     }
 
     score

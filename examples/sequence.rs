@@ -145,7 +145,7 @@ impl Distribution<Gene> for Standard {
     }
 }
 
-fn score_data(candidate: &Vec<u8>) -> isize {
+fn score_data(candidate: &Vec<u8>) -> u64 {
     let mut score = 1.0;
     let candidate_length_squared = candidate.len().pow(2) as f64;
     let max_loss = 1.0 / candidate_length_squared;
@@ -168,10 +168,10 @@ fn score_data(candidate: &Vec<u8>) -> isize {
         }
     }
 
-    (score * 10000.0) as isize
+    (score * 10000.0) as u64
 }
 
-fn get_score_index(agent: &Agent<Gene>, data: &Vec<u8>) -> isize {
+fn get_score_index(agent: &Agent<Gene>, data: &Vec<u8>) -> u64 {
     let processed = get_processed_data(agent.get_genes(), data);
     return score_data(&processed);
 }

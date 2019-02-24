@@ -23,7 +23,7 @@ use rand::{
 use std::marker::{Send, PhantomData};
 use std::collections::{BTreeMap, HashMap};
 
-pub type ScoreFunction<Gene, Data> = fn(&Agent<Gene>, &Data) -> isize;
+pub type ScoreFunction<Gene, Data> = fn(&Agent<Gene>, &Data) -> Score;
 
 #[derive(Clone, Copy)]
 pub enum OperationType {
@@ -76,7 +76,7 @@ impl Selection {
         self.preferred_minimum
     }
 
-    pub fn agents <'a, Gene> (&self, population: &'a Population<Gene>) -> BTreeMap<isize, &'a Agent<Gene>>
+    pub fn agents <'a, Gene> (&self, population: &'a Population<Gene>) -> BTreeMap<Score, &'a Agent<Gene>>
     where
     Gene: Clone
     {
@@ -146,6 +146,8 @@ Data: Clone + Send + 'static
     }
 }
 
+pub type Score = u64;
+
 #[derive(Clone)]
 pub struct ScoreProvider <Gene, Data>
 where
@@ -153,8 +155,8 @@ Standard: Distribution<Gene>,
 Gene: Clone + Hash
 {
     scoring_function: ScoreFunction<Gene, Data>,
-    offset: isize,
-    score_cache: HashMap<u64, isize>
+    offset: Score,
+    score_cache: HashMap<u64, Score>
 }
 
 impl <Gene, Data> ScoreProvider <Gene, Data>
@@ -162,7 +164,7 @@ where
 Standard: Distribution<Gene>,
 Gene: Clone + Hash
 {
-    pub fn new(scoring_function: ScoreFunction<Gene, Data>, offset: isize) -> Self {
+    pub fn new(scoring_function: ScoreFunction<Gene, Data>, offset: Score) -> Self {
         Self {
             scoring_function: scoring_function,
             offset: offset,
@@ -170,19 +172,30 @@ Gene: Clone + Hash
         }
     }
 
-    pub fn get_score(&mut self, agent: &Agent<Gene>, data: &Data, rng: &mut ThreadRng) -> isize {
+    pub fn get_score(&mut self, agent: &Agent<Gene>, data: &Data, rng: &mut ThreadRng) -> Score {
         let hash = agent.get_hash();
 
-        let offset = rng.gen_range(-self.offset, self.offset);
+        let offset = rng.gen_range(0, self.offset * 2);
 
         if self.score_cache.contains_key(&hash) {
-            return self.score_cache[&hash] + offset;
+            let score = self.score_cache[&hash] + offset - self.offset;
+            if score <= self.offset {
+                return 0;
+            } else {
+                return score - self.offset;
+            }
         }
 
         let score = (self.scoring_function)(agent, data);
         self.score_cache.insert(hash, score);
 
-        score + offset
+        let score = score + offset;
+
+        if score <= self.offset {
+            return 0;
+        } else {
+            return score - self.offset;
+        }
     }
 }
 
@@ -235,7 +248,7 @@ fn cull_agents<Gene>(
     selection: Selection,
 ) -> Population<Gene>
 {
-    let keys: Vec<isize> = population.get_agents().keys().map(|k| *k).collect();
+    let keys: Vec<Score> = population.get_agents().keys().map(|k| *k).collect();
     let cull_number = selection.count(&population);
     if cull_number >= keys.len() {
         return population;
@@ -250,7 +263,7 @@ fn cull_agents<Gene>(
 }
 
 fn get_mutated_agents<Gene>(
-    agents: BTreeMap<isize, &Agent<Gene>>,
+    agents: BTreeMap<Score, &Agent<Gene>>,
 ) -> Vec<Agent<Gene>>
 where Standard: Distribution<Gene>,
 Gene: Clone + Hash + Send
@@ -268,7 +281,7 @@ fn create_children_from_crossover<Gene, Data>(
     pairs: Vec<(Agent<Gene>, Agent<Gene>)>,
     data: &Data,
     score_provider: &mut ScoreProvider<Gene, Data>,
-) -> Vec<(isize, Agent<Gene>)>
+) -> Vec<(Score, Agent<Gene>)>
 where
 Standard: Distribution<Gene>,
 Gene: Clone + Hash
@@ -284,14 +297,14 @@ Gene: Clone + Hash
 }
 
 fn get_random_subset<Gene>(
-    agents: &BTreeMap<isize, Agent<Gene>>,
+    agents: &BTreeMap<Score, Agent<Gene>>,
     rate: f64,
     preferred_minimum: usize
-) -> BTreeMap<isize, &Agent<Gene>>
+) -> BTreeMap<Score, &Agent<Gene>>
 where Gene: Clone
 {
     let number = rate_to_number(agents.len(), rate, preferred_minimum);
-    let keys: Vec<isize> = agents.keys().map(|k| *k).collect();
+    let keys: Vec<Score> = agents.keys().map(|k| *k).collect();
     let mut rng = rand::thread_rng();
     let mut subset = BTreeMap::new();
     for _ in 0..number {
@@ -306,14 +319,14 @@ where Gene: Clone
 }
 
 fn get_highest_scored_agents<Gene>(
-    agents: &BTreeMap<isize, Agent<Gene>>,
+    agents: &BTreeMap<Score, Agent<Gene>>,
     rate: f64,
     preferred_minimum: usize
-) -> BTreeMap<isize, &Agent<Gene>>
+) -> BTreeMap<Score, &Agent<Gene>>
 where Gene: Clone
 {
     let number = rate_to_number(agents.len(), rate, preferred_minimum);
-    let mut keys: Vec<isize> = agents.keys().map(|k| *k).collect();
+    let mut keys: Vec<Score> = agents.keys().map(|k| *k).collect();
     let keys_len = keys.len();
     keys.drain(0..(keys_len - number));
     let mut subset = BTreeMap::new();
@@ -328,14 +341,14 @@ where Gene: Clone
 }
 
 fn get_lowest_scored_agents<Gene>(
-    agents: &BTreeMap<isize, Agent<Gene>>,
+    agents: &BTreeMap<Score, Agent<Gene>>,
     rate: f64,
     preferred_minimum: usize
-) -> BTreeMap<isize, &Agent<Gene>>
+) -> BTreeMap<Score, &Agent<Gene>>
 where Gene: Clone
 {
     let number = rate_to_number(agents.len(), rate, preferred_minimum);
-    let mut keys: Vec<isize> = agents.keys().map(|k| *k).collect();
+    let mut keys: Vec<Score> = agents.keys().map(|k| *k).collect();
     keys.truncate(number);
     let mut subset = BTreeMap::new();
     for key in keys {
@@ -349,12 +362,12 @@ where Gene: Clone
 }
 
 fn create_random_pairs<Gene>(
-    agents: BTreeMap<isize, &Agent<Gene>>,
+    agents: BTreeMap<Score, &Agent<Gene>>,
 ) -> Vec<(Agent<Gene>, Agent<Gene>)> 
 where
 Gene: Clone
 {
-    let keys: Vec<&isize> = agents.keys().collect();
+    let keys: Vec<&Score> = agents.keys().collect();
     let mut rng = rand::thread_rng();
     let mut pairs = Vec::new();
     let count = keys.len();
@@ -383,7 +396,7 @@ pub fn cull_lowest_agents<Gene>(
     preferred_minimum: usize
 ) -> Population<Gene>
 {
-    let keys: Vec<isize> = population.get_agents().keys().map(|k| *k).collect();
+    let keys: Vec<Score> = population.get_agents().keys().map(|k| *k).collect();
     let cull_number = rate_to_number(keys.len(), rate, preferred_minimum);
     if cull_number >= keys.len() {
         return population;
@@ -408,8 +421,8 @@ fn rate_to_number(population: usize, rate: f64, preferred_minimum: usize) -> usi
 mod tests {
     use super::*;
 
-    fn get_score_index(agent: &Agent<u8>, _data: &u8) -> isize {
-        agent.get_genes()[0] as isize
+    fn get_score_index(agent: &Agent<u8>, _data: &u8) -> Score {
+        agent.get_genes()[0] as Score
     }
 
     #[test]

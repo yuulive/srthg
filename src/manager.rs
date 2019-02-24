@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::operations::{ScoreFunction, ScoreProvider};
+use super::operations::{Score, ScoreFunction, ScoreProvider};
 use super::population::Population;
 use super::evolution::run_iterations;
 use rand::{
@@ -43,9 +43,9 @@ Data: Clone + Send + 'static
     number_of_genes: usize,
     strict_gene_length: bool,
     initial_population_size: usize,
-    current_highest: isize,
-    agent_sender: Sender<BTreeMap<isize, Agent<Gene>>>,
-    agent_receiver: Receiver<BTreeMap<isize, Agent<Gene>>>,
+    current_highest: Score,
+    agent_sender: Sender<BTreeMap<Score, Agent<Gene>>>,
+    agent_receiver: Receiver<BTreeMap<Score, Agent<Gene>>>,
     number_of_child_threads: u8,
     max_child_threads: u8,
     operations: Vec<Operation<Gene, Data>>,
@@ -62,7 +62,7 @@ Data: Clone + Send + 'static
 
     pub fn new(score_function: ScoreFunction<Gene, Data>, data: Data) -> Self {
 
-        let (tx, rx) = channel::<BTreeMap<isize, Agent<Gene>>>();
+        let (tx, rx) = channel::<BTreeMap<Score, Agent<Gene>>>();
 
         let operations = vec![
             Operation::new(OperationType::Mutate, Selection::new(SelectionType::RandomAny, 0.1)),
@@ -109,7 +109,7 @@ Data: Clone + Send + 'static
         self.iterations_per_cycle = number;
     }
 
-    pub fn run(&mut self, goal: isize) {
+    pub fn run(&mut self, goal: Score) {
         self.main_population = Population::new(self.initial_population_size, self.number_of_genes, false, &self.data, &mut self.score_provider);
 
         while self.current_highest < goal {

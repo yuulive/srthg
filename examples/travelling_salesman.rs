@@ -217,7 +217,7 @@ fn get_distance(agent: &Agent<City>, data: &HashMap<(City, City), f64>) -> f64 {
 }
 
 // The scoring function used to determine the score on an agent, based on its genes.
-fn get_score_index(agent: &Agent<City>, data: &HashMap<(City, City), f64>) -> isize {
+fn get_score_index(agent: &Agent<City>, data: &HashMap<(City, City), f64>) -> u64 {
     let distance = get_distance(agent, data);
 
     let mut repeats = 0;
@@ -238,5 +238,5 @@ fn get_score_index(agent: &Agent<City>, data: &HashMap<(City, City), f64>) -> is
     // the salesman should be visiting each city once.
     let score = (6.0 * agent.get_genes().len() as f64 - distance) * 100.0 * (1.0 - repeats as f64 * 0.1);
 
-    return score as isize;
+    return score as u64;
 }

@@ -47,9 +47,10 @@ Data: Clone + Send + 'static
 mod tests {
     use super::*;
     use super::super::agent::Agent;
+    use super::super::operations::Score;
 
-    fn get_score_index(agent: &Agent<u8>, _data: &u8) -> isize {
-        agent.get_genes()[0] as isize
+    fn get_score_index(agent: &Agent<u8>, _data: &u8) -> Score {
+        agent.get_genes()[0] as Score
     }
 
     #[test]

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use super::agent::Agent;
-use super::operations::ScoreProvider;
+use super::operations::{Score, ScoreProvider};
 use std::collections::{BTreeMap, HashSet};
 use std::hash::Hash;
 use rand::{
@@ -23,13 +23,13 @@ use rand::{
 
 #[derive(Clone)]
 pub struct Population <Gene> {
-    agents: BTreeMap<isize, Agent<Gene>>,
+    agents: BTreeMap<Score, Agent<Gene>>,
     register: HashSet<u64>,
     unique_agents: bool,
 
 }
 
-impl <Gene> Population <Gene>{
+impl <Gene> Population <Gene> {
 
     pub fn new_empty(unique: bool) -> Self {
         Self {
@@ -75,13 +75,13 @@ impl <Gene> Population <Gene>{
         population
     }
 
-    pub fn set_agents(&mut self, agents: BTreeMap<isize, Agent<Gene>>) {
+    pub fn set_agents(&mut self, agents: BTreeMap<Score, Agent<Gene>>) {
         for (score, agent) in agents {
             self.insert(score, agent);
         }
     }
 
-    pub fn insert(&mut self, score: isize, agent: Agent<Gene>) {
+    pub fn insert(&mut self, score: Score, agent: Agent<Gene>) {
         if self.unique_agents {
             if self.register.contains(&agent.get_hash()) {
                 return;
@@ -91,7 +91,7 @@ impl <Gene> Population <Gene>{
         self.agents.insert(score, agent);
     }
 
-    pub fn remove(&mut self, score: isize) -> Option<Agent<Gene>> where Gene: Clone {
+    pub fn remove(&mut self, score: Score) -> Option<Agent<Gene>> where Gene: Clone {
         let agent = self.agents.remove(&score);
         if self.unique_agents && agent.is_some() {
             self.register.remove(&agent.clone().unwrap().get_hash());
@@ -99,11 +99,11 @@ impl <Gene> Population <Gene>{
         agent
     }
 
-    pub fn get(&self, score: isize) -> Option<&Agent<Gene>> {
+    pub fn get(&self, score: Score) -> Option<&Agent<Gene>> {
         self.agents.get(&score)
     }
 
-    pub fn get_agents(&self) -> &BTreeMap<isize, Agent<Gene>> {
+    pub fn get_agents(&self) -> &BTreeMap<Score, Agent<Gene>> {
         &self.agents
     }
 
@@ -111,7 +111,7 @@ impl <Gene> Population <Gene>{
         self.agents.len()
     }
 
-    pub fn cull_all_below(&mut self, score: isize) {
+    pub fn cull_all_below(&mut self, score: Score) {
         self.agents = self.agents.split_off(&score);
         if self.unique_agents {
             self.register.clear();
@@ -121,7 +121,7 @@ impl <Gene> Population <Gene>{
         }
     }
 
-    pub fn cull_all_above(&mut self, score: isize) {
+    pub fn cull_all_above(&mut self, score: Score) {
         self.agents.split_off(&score);
         if self.unique_agents {
             self.register.clear();
@@ -131,7 +131,7 @@ impl <Gene> Population <Gene>{
         }
     }
 
-    pub fn contains_score(&self, score: isize) -> bool {
+    pub fn contains_score(&self, score: Score) -> bool {
         self.agents.contains_key(&score)
     }
 
@@ -142,11 +142,11 @@ impl <Gene> Population <Gene>{
         true
     }
 
-    pub fn get_scores(&self) -> Vec<isize> {
+    pub fn get_scores(&self) -> Vec<Score> {
         self.agents.keys().map(|k| *k).collect()
     }
 
-    pub fn get_random_score(&self) -> isize {
+    pub fn get_random_score(&self) -> Score {
         let mut rng = rand::thread_rng();
         self.get_scores()[rng.gen_range(0, self.len())]
     }
@@ -164,8 +164,8 @@ mod tests {
         assert_eq!(0, population.get_scores().len());
     }
 
-    fn get_score_index(agent: &Agent<u8>, _data: &u8) -> isize {
-        agent.get_genes()[0] as isize
+    fn get_score_index(agent: &Agent<u8>, _data: &u8) -> Score {
+        agent.get_genes()[0] as Score
     }
 
     #[test]
