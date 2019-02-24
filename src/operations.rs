@@ -240,7 +240,7 @@ Gene: Clone + Hash
         children.push(child);
     }
     let children = score_provider.evaluate_scores(children, data);
-    
+
     let mut agents = Vec::new();
     let mut rng = rand::thread_rng();
     for agent in children {
@@ -374,7 +374,7 @@ fn rate_to_number(population: usize, rate: f64, preferred_minimum: usize) -> usi
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::fitness::ScoreError;
+    use super::super::fitness::{GeneralScoreProvider, ScoreError};
 
     fn get_score_index(agent: &Agent<u8>, _data: &u8) -> Result<Score, ScoreError> {
         let score = agent.get_genes()[0] as Score;
@@ -385,7 +385,7 @@ mod tests {
     fn selection_random_any_returns_correct_proportion() {
         let selection = Selection::with_values(SelectionType::RandomAny, 0.25, 0);
 
-        let population = Population::new(8, 1, false, &0, &mut ScoreProvider::new(get_score_index, 25));
+        let population = Population::new(8, 1, false, &0, &mut GeneralScoreProvider::new(get_score_index, 25));
 
         let agent_map = selection.agents(&population);
         assert_eq!(2, agent_map.len());
@@ -395,7 +395,7 @@ mod tests {
     fn selection_highest_score_returns_highest() {
         let selection = Selection::with_values(SelectionType::HighestScore, 0.25, 0);
 
-        let population = Population::new(8, 1, false, &0, &mut ScoreProvider::new(get_score_index, 25));
+        let population = Population::new(8, 1, false, &0, &mut GeneralScoreProvider::new(get_score_index, 25));
 
         let agent_map = selection.agents(&population);
         assert_eq!(2, agent_map.len());
@@ -411,7 +411,7 @@ mod tests {
     fn selection_lowest_score_returns_lowest() {
         let selection = Selection::with_values(SelectionType::LowestScore, 0.25, 0);
 
-        let population = Population::new(8, 1, false, &0, &mut ScoreProvider::new(get_score_index, 25));
+        let population = Population::new(8, 1, false, &0, &mut GeneralScoreProvider::new(get_score_index, 25));
 
         let agent_map = selection.agents(&population);
         assert_eq!(2, agent_map.len());

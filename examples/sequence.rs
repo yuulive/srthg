@@ -30,7 +30,7 @@ use rand::{
 use std::time::Instant;
 use aristeia::agent::{Agent};
 
-use aristeia::manager::Manager;
+use aristeia::manager::create_manager;
 use aristeia::fitness::ScoreError;
 
 
@@ -49,7 +49,7 @@ pub fn main() {
 
     let data = vec![0; 10];
 
-    let mut manager = Manager::new(get_score_index, data.clone());
+    let mut manager = create_manager(get_score_index, data.clone());
     manager.set_number_of_genes(30, false);
     manager.run(9999);
     let agents = manager.get_population().get_agents();

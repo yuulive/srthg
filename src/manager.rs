@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::fitness::{Score, ScoreProvider, FitnessFunction};
+use super::fitness::{Score, ScoreProvider, GeneralScoreProvider, FitnessFunction};
 use super::population::Population;
 use super::evolution::run_iterations;
 use rand::{
@@ -32,11 +32,23 @@ use super::agent::Agent;
 use std::collections::BTreeMap;
 use std::sync::mpsc::{Sender, Receiver};
 
-pub struct Manager <Gene, Data>
-where
+pub fn create_manager<Gene, Data> 
+(score_function: FitnessFunction<Gene, Data>, data: Data) -> Manager<Gene, Data, GeneralScoreProvider<Gene, Data>>
+where 
 Standard: Distribution<Gene>,
 Gene: Clone + Hash + Send + 'static,
 Data: Clone + Send + 'static
+{
+    let manager: Manager<Gene, Data, GeneralScoreProvider<Gene, Data>> = Manager::new(score_function, data);
+    manager 
+}
+
+pub struct Manager <Gene, Data, SP>
+where
+Standard: Distribution<Gene>,
+Gene: Clone + Hash + Send + 'static,
+Data: Clone + Send + 'static,
+SP: Clone + ScoreProvider<Gene, Data> + 'static
 {
     main_population: Population<Gene>,
     data: Data,
@@ -50,16 +62,16 @@ Data: Clone + Send + 'static
     max_child_threads: u8,
     operations: Vec<Operation<Gene, Data>>,
     iterations_per_cycle: usize,
-    score_provider: ScoreProvider<Gene, Data>
+    score_provider: SP
 }
 
-impl <Gene, Data> Manager <Gene, Data>
+impl <Gene, Data, SP> Manager <Gene, Data, SP>
 where
 Standard: Distribution<Gene>,
 Gene: Clone + Hash + Send + 'static,
-Data: Clone + Send + 'static
+Data: Clone + Send + 'static,
+SP: Clone + Send + ScoreProvider<Gene, Data>
 {
-
     pub fn new(score_function: FitnessFunction<Gene, Data>, data: Data) -> Self {
 
         let (tx, rx) = channel::<BTreeMap<Score, Agent<Gene>>>();
@@ -84,7 +96,7 @@ Data: Clone + Send + 'static
             max_child_threads: 3,
             operations: operations,
             iterations_per_cycle: 100,
-            score_provider: ScoreProvider::new(score_function, 25)
+            score_provider: SP::new(score_function, 25)
         }
     }
 

@@ -44,7 +44,7 @@ use aristeia::operations::{
     Selection,
     SelectionType
 };
-use aristeia::fitness::{ScoreProvider, ScoreError};
+use aristeia::fitness::{GeneralScoreProvider, ScoreProvider, ScoreError};
 
 // These are cities in the North Island of New Zealand.
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -113,7 +113,7 @@ pub fn main() {
             OperationType::Cull)
     ];
 
-    let mut score_provider = ScoreProvider::new(get_score_index, 25);
+    let mut score_provider = GeneralScoreProvider::new(get_score_index, 25);
 
     // Create a population of 20 agents which each have a set of 10 randomly chosen genes.
     // We need to pass in the data as this is used for scoring the agents. 

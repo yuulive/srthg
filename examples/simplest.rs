@@ -15,12 +15,12 @@
 extern crate aristeia;
 
 use aristeia::agent::Agent;
-use aristeia::manager::Manager;
+use aristeia::manager::create_manager;
 use aristeia::fitness::ScoreError;
 
 fn main() {
 
-    let mut manager = Manager::new(get_score_index, 0);
+    let mut manager = create_manager(get_score_index, 0);
     manager.set_number_of_genes(5, true);
     manager.run(1250);
     let agents = manager.get_population().get_agents();

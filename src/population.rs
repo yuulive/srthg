@@ -39,16 +39,17 @@ impl <Gene> Population <Gene> {
         }
     }
 
-    pub fn new<Data>(
+    pub fn new<Data, SP>(
         start_size: usize,
         number_of_genes: usize,
         unique: bool,
         data: &Data,
-        score_provider: &mut ScoreProvider<Gene, Data>,
+        score_provider: &mut SP,
     ) -> Population<Gene> 
     where
     Standard: Distribution<Gene>,
-    Gene: Hash + Clone
+    Gene: Hash + Clone,
+    SP: ScoreProvider<Gene, Data>
     {
         let mut population = Population::new_empty(unique);
         let mut rng = rand::thread_rng();
@@ -162,7 +163,7 @@ impl <Gene> Population <Gene> {
 #[cfg(test)]
 mod tests {
     use super::*;
-        use super::super::fitness::ScoreError;
+    use super::super::fitness::{GeneralScoreProvider, ScoreError};
 
     #[test]
     fn new_empty() {
@@ -179,7 +180,7 @@ mod tests {
 
     #[test]
     fn new_with_false_unique() {
-        let mut population = Population::new(5, 6, false, &0, &mut ScoreProvider::new(get_score_index, 25));
+        let mut population = Population::new(5, 6, false, &0, &mut GeneralScoreProvider::new(get_score_index, 25));
         assert_eq!(5, population.len());
         assert_eq!(5, population.get_agents().len());
         assert_eq!(5, population.get_scores().len());
@@ -203,7 +204,7 @@ mod tests {
 
     #[test]
     fn new_with_true_unique() {
-        let mut population = Population::new(5, 6, true, &0, &mut ScoreProvider::new(get_score_index, 25));
+        let mut population = Population::new(5, 6, true, &0, &mut GeneralScoreProvider::new(get_score_index, 25));
         assert_eq!(5, population.len());
         assert_eq!(5, population.get_agents().len());
         assert_eq!(5, population.get_scores().len());
@@ -237,7 +238,7 @@ mod tests {
 
     #[test]
     fn cull_all_below() {
-        let mut population = Population::new(5, 6, true, &0, &mut ScoreProvider::new(get_score_index, 25));
+        let mut population = Population::new(5, 6, true, &0, &mut GeneralScoreProvider::new(get_score_index, 25));
         assert_eq!(5, population.len());
         assert_eq!(5, population.get_agents().len());
         assert_eq!(5, population.get_scores().len());

@@ -22,17 +22,18 @@ use rand::{
 };
 use std::hash::Hash;
 
-pub fn run_iterations<Gene, Data>(
+pub fn run_iterations<Gene, Data, SP>(
     mut population: Population<Gene>,
     iterations: usize,
     data: &Data,
     operations: &Vec<Operation<Gene, Data>>,
-    score_provider: &mut ScoreProvider<Gene, Data>
+    score_provider: &mut SP
 ) -> Population<Gene>
 where
 Standard: Distribution<Gene>,
 Gene: Clone + Hash + Send + 'static,
-Data: Clone + Send + 'static
+Data: Clone + Send + 'static,
+SP: Clone + ScoreProvider<Gene, Data>
 {
     for _ in 0..iterations {
         for operation in operations.iter() {
@@ -47,7 +48,7 @@ Data: Clone + Send + 'static
 mod tests {
     use super::*;
     use super::super::agent::Agent;
-    use super::super::fitness::{Score, ScoreError};
+    use super::super::fitness::{Score, ScoreError, GeneralScoreProvider};
 
     fn get_score_index(agent: &Agent<u8>, _data: &u8) -> Result<Score, ScoreError> {
         let score = agent.get_genes()[0] as Score;
@@ -56,7 +57,7 @@ mod tests {
 
     #[test]
     fn run_iterations_nothing_to_do() {
-        let mut score_provider = ScoreProvider::new(get_score_index, 25);
+        let mut score_provider = GeneralScoreProvider::new(get_score_index, 25);
         let population = run_iterations(Population::new_empty(false), 0, &0, &Vec::new(), &mut score_provider);
         assert_eq!(0, population.len());
     }
