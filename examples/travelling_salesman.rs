@@ -113,7 +113,7 @@ pub fn main() {
             OperationType::Cull)
     ];
 
-    let mut score_provider = GeneralScoreProvider::new(get_score_index, 25);
+    let mut score_provider = GeneralScoreProvider::new(fitness_function, 25);
 
     // Create a population of 20 agents which each have a set of 10 randomly chosen genes.
     // We need to pass in the data as this is used for scoring the agents. 
@@ -216,8 +216,8 @@ fn get_distance(agent: &Agent<City>, data: &HashMap<(City, City), f64>) -> f64 {
     distance
 }
 
-// The scoring function used to determine the score on an agent, based on its genes.
-fn get_score_index(agent: &Agent<City>, data: &HashMap<(City, City), f64>) -> Result<u64, ScoreError> {
+// The fitness function used to determine the score on an agent, based on its genes.
+fn fitness_function(agent: &Agent<City>, data: &HashMap<(City, City), f64>) -> Result<u64, ScoreError> {
     let distance = get_distance(agent, data);
 
     let mut repeats = 0;

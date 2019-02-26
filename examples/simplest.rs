@@ -20,7 +20,7 @@ use aristeia::fitness::ScoreError;
 
 fn main() {
 
-    let mut manager = create_manager(get_score_index, 0);
+    let mut manager = create_manager(fitness_function, 0);
     manager.set_number_of_genes(5, true);
     manager.run(1250);
     let agents = manager.get_population().get_agents();
@@ -39,7 +39,7 @@ fn main() {
     }
 }
 
-fn get_score_index(agent: &Agent<u8>, _data: &u8) -> Result<u64, ScoreError> {
+fn fitness_function(agent: &Agent<u8>, _data: &u8) -> Result<u64, ScoreError> {
     let mut score = 0;
 
     for gene in agent.get_genes() {

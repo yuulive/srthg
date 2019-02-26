@@ -49,7 +49,7 @@ pub fn main() {
 
     let data = vec![0; 10];
 
-    let mut manager = create_manager(get_score_index, data.clone());
+    let mut manager = create_manager(fitness_function, data.clone());
     manager.set_number_of_genes(30, false);
     manager.run(9999);
     let agents = manager.get_population().get_agents();
@@ -172,7 +172,7 @@ fn score_data(candidate: &Vec<u8>) -> u64 {
     (score * 10000.0) as u64
 }
 
-fn get_score_index(agent: &Agent<Gene>, data: &Vec<u8>) -> Result<u64, ScoreError> {
+fn fitness_function(agent: &Agent<Gene>, data: &Vec<u8>) -> Result<u64, ScoreError> {
     let processed = get_processed_data(agent.get_genes(), data);
     Ok(score_data(&processed))
 }

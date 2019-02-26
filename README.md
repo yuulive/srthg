@@ -25,20 +25,21 @@ In main.rs, start off with the following:
 extern crate aristeia;
 
 use aristeia::agent::Agent;
-use aristeia::manager::Manager;
+use aristeia::manager::create_manager;
+use aristeia::fitness::ScoreError;
 ```
 
-In the above code, we import the Manager, which will run the genetic algorithm system. We also import Agent so that we can investigate the 'fittest' set of genes after running.
+In the above code, we import a function to create a default Manager object, which will run the genetic algorithm system. We import Agent so that we can investigate the 'fittest' set of genes after running. We also import ScoreError for use when defining our fitness function.
 
 Now, inside you main() function, delete the default code in there and let's add the code to create and run the manager:
 
 ```rust
-let mut manager = Manager::new(get_score_index, 0);
+let mut manager = create_manager(fitness_function, 0);
 manager.set_number_of_genes(5, true);
 manager.run(1250);;
 ```
 
-We've created a new manager, passing in a function called get_score_index which is what determines the fitness score of our agents. We define this function later in this example. We also pass in 0 as the second argument, which is for additional data. We aren't using the data parameter in this example, but you can look at some of examples in this library to see other ways that data can be used.
+We've created a new manager, passing in our fitness function. We define this function later in this example. We also pass in 0 as the second argument, which is for additional data. We aren't using the data parameter in this example, but you can look at some of examples in this library to see other ways that data can be used.
 
 We also set the number of genes that each agent should have. The second argument is for saying whether agents have to have that number of genes, or whether it can vary a bit if we aren't getting any good scores. However, that 'varying' functionality has not yet been implemented.
 
@@ -65,12 +66,12 @@ for (score_index, agent) in population.get_agents().iter().rev() {
 }
 ```
 
-So the last thing to do is add that scoring function. We're just wanting a quick example here, so we're just going to make the genes 'u8' (unsigned 8-bit integers), and the higher they are, the higher the score.
+So the last thing to do is add the fitness function. We're just wanting a quick example here, so we're just going to make the genes 'u8' (unsigned 8-bit integers), and the higher they are, the higher the score.
 
 Add the following below your main function:
 
 ```rust
-fn get_score_index(agent: &Agent<u8>, _data: &u8) -> isize {
+fn fitness_function(agent: &Agent<u8>, _data: &u8) -> isize {
     let mut score = 0;
 
     for gene in agent.get_genes() {
