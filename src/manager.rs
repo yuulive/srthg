@@ -32,14 +32,23 @@ use super::agent::Agent;
 use std::collections::BTreeMap;
 use std::sync::mpsc::{Sender, Receiver};
 
-pub fn create_manager<Gene, Data> 
-(score_function: FitnessFunction<Gene, Data>, data: Data) -> Manager<Gene, Data, GeneralScoreProvider<Gene, Data>>
+/// Returns a Manager object that will run the genetic algorithm.
+/// Use this function if you're just writing a fitness function and not 
+/// a special ScoreProvider.
+/// fitness_function: A function you must define that determines the fitness of your agents.
+/// data: additional immutable data to be used by during the run of the algorithm. Could be used as
+/// a cache containing pre-calculated values or an initial state for data that will be changed when reading
+/// the genes. Just use 0 if you have no other use for this argument.
+pub fn create_manager<Gene, Data> (
+    fitness_function: FitnessFunction<Gene, Data>,
+    data: Data
+) -> Manager<Gene, Data, GeneralScoreProvider<Gene, Data>>
 where 
 Standard: Distribution<Gene>,
 Gene: Clone + Hash + Send + 'static,
 Data: Clone + Send + 'static
 {
-    let manager: Manager<Gene, Data, GeneralScoreProvider<Gene, Data>> = Manager::new(score_function, data);
+    let manager: Manager<Gene, Data, GeneralScoreProvider<Gene, Data>> = Manager::new(fitness_function, data);
     manager 
 }
 
@@ -72,7 +81,7 @@ Gene: Clone + Hash + Send + 'static,
 Data: Clone + Send + 'static,
 SP: Clone + Send + ScoreProvider<Gene, Data>
 {
-    pub fn new(score_function: FitnessFunction<Gene, Data>, data: Data) -> Self {
+    pub fn new(fitness_function: FitnessFunction<Gene, Data>, data: Data) -> Self {
 
         let (tx, rx) = channel::<BTreeMap<Score, Agent<Gene>>>();
 
@@ -96,7 +105,7 @@ SP: Clone + Send + ScoreProvider<Gene, Data>
             max_child_threads: 3,
             operations: operations,
             iterations_per_cycle: 100,
-            score_provider: SP::new(score_function, 25)
+            score_provider: SP::new(fitness_function, 25)
         }
     }
 
