@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.2
+
+* Added ScoreProvider trait that allows defining more customised ways of determining scores (perhaps for optimisation or interfacing with other systems).
+* Added manager::create_manager function for simple way to still get the manager if the generic score provider is sufficient.
+* The scoring function is now referred to as the fitness function.
+* The fitness function returns are result rather than the score directly.
+* Added the fitness::ScoreError struct for fitness function errors.
+
 ## 0.2.1
 
 * Removed the 'multilevel' functions from th evolution module.
