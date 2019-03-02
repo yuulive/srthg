@@ -48,7 +48,8 @@ Standard: Distribution<Gene>,
 Gene: Clone + Hash + Send + 'static,
 Data: Clone + Send + 'static
 {
-    let manager: Manager<Gene, Data, GeneralScoreProvider<Gene, Data>> = Manager::new(fitness_function, data);
+    let score_provider = GeneralScoreProvider::new(fitness_function, 25);
+    let manager = Manager::new(score_provider, data);
     manager 
 }
 
@@ -81,7 +82,7 @@ Gene: Clone + Hash + Send + 'static,
 Data: Clone + Send + 'static,
 SP: Clone + Send + ScoreProvider<Gene, Data>
 {
-    pub fn new(fitness_function: FitnessFunction<Gene, Data>, data: Data) -> Self {
+    pub fn new(score_provider: SP, data: Data) -> Self {
 
         let (tx, rx) = channel::<BTreeMap<Score, Agent<Gene>>>();
 
@@ -105,7 +106,7 @@ SP: Clone + Send + ScoreProvider<Gene, Data>
             max_child_threads: 3,
             operations: operations,
             iterations_per_cycle: 100,
-            score_provider: SP::new(fitness_function, 25)
+            score_provider: score_provider
         }
     }
 

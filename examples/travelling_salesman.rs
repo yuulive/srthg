@@ -44,7 +44,7 @@ use aristeia::operations::{
     Selection,
     SelectionType
 };
-use aristeia::fitness::{GeneralScoreProvider, ScoreProvider, ScoreError};
+use aristeia::fitness::{GeneralScoreProvider, ScoreError};
 
 // These are cities in the North Island of New Zealand.
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
