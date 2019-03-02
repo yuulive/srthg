@@ -32,7 +32,7 @@ pub type Score = u64;
 
 pub trait ScoreProvider <Gene, Data> {
     fn evaluate_scores(&mut self, agents: Vec<Agent<Gene>>, data: &Data) -> Vec<Agent<Gene>>;
-    fn get_score(&mut self, agent: &Agent<Gene>, data: &Data, rng: &mut ThreadRng) -> Score;
+    fn get_score(&mut self, agent: &Agent<Gene>, data: &Data, rng: &mut ThreadRng) -> Result<Score, ScoreError>;
 }
 
 #[derive(Clone)]
@@ -56,6 +56,15 @@ Gene: Clone + Hash
             scoring_function: scoring_function,
             offset: offset,
             score_cache: HashMap::new()
+        }
+    }
+
+    pub fn offset_cached_score(&self, hash: &u64, offset: Score) -> Result<Score, ScoreError> {
+        let score = self.score_cache[&hash] + offset;
+        if score <= self.offset {
+            return Ok(0);
+        } else {
+            return Ok(score - self.offset);
         }
     }
 }
@@ -85,30 +94,18 @@ Gene: Clone + Hash
         cached
     }
 
-    fn get_score(&mut self, agent: &Agent<Gene>, data: &Data, rng: &mut ThreadRng) -> Score {
+    fn get_score(&mut self, agent: &Agent<Gene>, data: &Data, rng: &mut ThreadRng) -> Result<Score, ScoreError> {
         let hash = agent.get_hash();
-
         let offset = rng.gen_range(0, self.offset * 2);
 
         if self.score_cache.contains_key(&hash) {
-            let score = self.score_cache[&hash] + offset;
-            if score <= self.offset {
-                return 0;
-            } else {
-                return score - self.offset;
-            }
+            return self.offset_cached_score(&hash, offset);
         }
 
         let score = (self.scoring_function)(agent, data).unwrap();
         self.score_cache.insert(hash, score);
 
-        let score = score + offset;
-
-        if score <= self.offset {
-            return 0;
-        } else {
-            return score - self.offset;
-        }
+        return self.offset_cached_score(&hash, offset);
     }
 }
 

@@ -160,7 +160,7 @@ Data: Clone + Send + 'static
     let children = score_provider.evaluate_scores(children, data);
     let mut rng = rand::thread_rng();
     for agent in children {
-        let score_index = score_provider.get_score(&agent, data, &mut rng);
+        let score_index = score_provider.get_score(&agent, data, &mut rng).unwrap();
         population.insert(score_index, agent);
     }
 
@@ -244,7 +244,7 @@ Gene: Clone + Hash
     let mut agents = Vec::new();
     let mut rng = rand::thread_rng();
     for agent in children {
-        let score_index = score_provider.get_score(&agent, data, &mut rng);
+        let score_index = score_provider.get_score(&agent, data, &mut rng).unwrap();
         agents.push((score_index, agent));
     }
     return agents;

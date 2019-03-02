@@ -64,7 +64,7 @@ impl <Gene> Population <Gene> {
         let agents = score_provider.evaluate_scores(agents, &data);
 
         for agent in agents {
-            let mut score = score_provider.get_score(&agent, &data, &mut rng);
+            let mut score = score_provider.get_score(&agent, &data, &mut rng).unwrap();
 
             loop {
                 if score == 0 {
