@@ -179,7 +179,10 @@ SP: Clone + Send + ScoreProvider<Gene, Data>
         thread::spawn(move || {
             let population = run_iterations(Population::new(initial_population_size, number_of_genes, false, &data, &mut score_provider), iterations_per_cycle, &data, &operations, &mut score_provider);
             let population = cull_lowest_agents(population, 0.5, 1);
-            tx.send(population.get_agents().clone()).unwrap();
+            match tx.send(population.get_agents().clone()) {
+                Ok(()) => (),
+                Err(_) => () // The parent thread probably finished its run. That doesn't really matter.
+            }
         });
 
         self.number_of_child_threads += 1;
