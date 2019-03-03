@@ -31,7 +31,7 @@ pub type FitnessFunction<Gene, Data> = fn(&Agent<Gene>, &Data) -> Result<Score, 
 pub type Score = u64;
 
 pub trait ScoreProvider <Gene, Data> {
-    fn evaluate_scores(&mut self, agents: Vec<Agent<Gene>>, data: &Data) -> Vec<Agent<Gene>>;
+    fn evaluate_scores(&mut self, agents: Vec<Agent<Gene>>, data: &Data) -> Result<Vec<Agent<Gene>>, ScoreError>;
     fn get_score(&mut self, agent: &Agent<Gene>, data: &Data, rng: &mut ThreadRng) -> Result<Score, ScoreError>;
 }
 
@@ -74,7 +74,7 @@ where
 Standard: Distribution<Gene>,
 Gene: Clone + Hash
 {
-    fn evaluate_scores(&mut self, agents: Vec<Agent<Gene>>, data: &Data) -> Vec<Agent<Gene>> {
+    fn evaluate_scores(&mut self, agents: Vec<Agent<Gene>>, data: &Data) -> Result<Vec<Agent<Gene>>, ScoreError> {
         let mut cached = Vec::new();
         
         for agent in agents {
@@ -91,7 +91,7 @@ Gene: Clone + Hash
             }
         }
 
-        cached
+        Ok(cached)
     }
 
     fn get_score(&mut self, agent: &Agent<Gene>, data: &Data, rng: &mut ThreadRng) -> Result<Score, ScoreError> {

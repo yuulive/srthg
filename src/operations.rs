@@ -157,7 +157,7 @@ Gene: Clone + Hash + Send + 'static,
 Data: Clone + Send + 'static
 {
     let children = get_mutated_agents(selection.agents(&population));
-    let children = score_provider.evaluate_scores(children, data);
+    let children = score_provider.evaluate_scores(children, data).unwrap();
     let mut rng = rand::thread_rng();
     for agent in children {
         let score_index = score_provider.get_score(&agent, data, &mut rng).unwrap();
@@ -239,7 +239,7 @@ Gene: Clone + Hash
         let child = crossover(&parent_one, &parent_two);
         children.push(child);
     }
-    let children = score_provider.evaluate_scores(children, data);
+    let children = score_provider.evaluate_scores(children, data).unwrap();
 
     let mut agents = Vec::new();
     let mut rng = rand::thread_rng();
