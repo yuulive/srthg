@@ -1,9 +1,10 @@
 [package]
 name = "aristeia"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["Brendan Cox <brendancox21@gmail.com>"]
 description = "An evolutionary computation library."
 repository = "https://github.com/brendancox/aristeia"
+homepage = "https://aristeia.dev"
 readme = "README.md"
 license = "Apache-2.0"
 keywords = ["heuristics", "genetic", "algorithm"]

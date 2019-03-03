@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.3
+
+* ScoreProvider trait no longer includes new. Meaning the struct can implement this as needed.
+* ScoreProvider instances are passed into the Manager instances.
+* ScoreProvider methods return results.
+
 ## 0.2.2
 
 * Added ScoreProvider trait that allows defining more customised ways of determining scores (perhaps for optimisation or interfacing with other systems).

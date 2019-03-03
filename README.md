@@ -16,7 +16,7 @@ Create a new project and add the following to the cargo.toml file:
 
 ```toml
 [dependencies]
-aristeia = "0.2.2"
+aristeia = "0.2.3"
 ```
 
 In main.rs, start off with the following:
