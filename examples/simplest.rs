@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate aristeia;
+extern crate xu;
 
-use aristeia::agent::Agent;
-use aristeia::manager::create_manager;
-use aristeia::fitness::ScoreError;
+use xu::agent::Agent;
+use xu::manager::create_manager;
+use xu::fitness::ScoreError;
 
 fn main() {
 

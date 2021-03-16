@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate aristeia;
+extern crate xu;
 extern crate rand;
 
-use aristeia::evolution::run_iterations;
+use xu::evolution::run_iterations;
 
 // We do this so that we don't have to prefix the city names with City::
 use self::City::{
@@ -34,17 +34,17 @@ use rand::{
     distributions::{Distribution, Standard},
     Rng,
 };
-use aristeia::agent::Agent;
-use aristeia::population::Population;
+use xu::agent::Agent;
+use xu::population::Population;
 use std::time::Instant;
 use std::collections::{HashMap, HashSet};
-use aristeia::operations::{
+use xu::operations::{
     Operation,
     OperationType,
     Selection,
     SelectionType
 };
-use aristeia::fitness::{GeneralScoreProvider, ScoreError};
+use xu::fitness::{GeneralScoreProvider, ScoreError};
 
 // These are cities in the North Island of New Zealand.
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]

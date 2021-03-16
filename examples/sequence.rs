@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate aristeia;
+extern crate xu;
 extern crate rand;
 
 use self::Gene::{
@@ -28,10 +28,10 @@ use rand::{
     Rng,
 };
 use std::time::Instant;
-use aristeia::agent::{Agent};
+use xu::agent::{Agent};
 
-use aristeia::manager::create_manager;
-use aristeia::fitness::ScoreError;
+use xu::manager::create_manager;
+use xu::fitness::ScoreError;
 
 
 #[derive(Clone, PartialEq, Hash)]

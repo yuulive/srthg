@@ -1,10 +1,10 @@
 [package]
-name = "aristeia"
+name = "xu"
 version = "0.2.3"
 authors = ["Brendan Cox <brendancox21@gmail.com>"]
-description = "An evolutionary computation library."
-repository = "https://github.com/brendancox/aristeia"
-homepage = "https://aristeia.dev"
+description = "xu is an evolutionary computation library."
+repository = "https://github.com/yuulive/xu"
+homepage = "https://github.com/yuulive/xu"
 readme = "README.md"
 license = "Apache-2.0"
 keywords = ["heuristics", "genetic", "algorithm"]

@@ -1,12 +1,10 @@
-# Aristeia
-
-[![Build Status](https://travis-ci.org/brendancox/aristeia.svg?branch=master)](https://travis-ci.org/brendancox/aristeia) 
+# Xu
 
 An evolutionary computation library written in Rust.
 
 ## What can this library do?
 
-Aristeia provides the generic logic required for genetic algorithms, allowing you to focus on the code specific to your particular use case.
+Xu provides the generic logic required for genetic algorithms, allowing you to focus on the code specific to your particular use case.
 
 It is still at an early stage so expect the API to change but also for improvements to be made.
 
@@ -16,17 +14,17 @@ Create a new project and add the following to the cargo.toml file:
 
 ```toml
 [dependencies]
-aristeia = "0.2.3"
+xu = "0.2.3"
 ```
 
 In main.rs, start off with the following:
 
 ```rust
-extern crate aristeia;
+extern crate xu;
 
-use aristeia::agent::Agent;
-use aristeia::manager::create_manager;
-use aristeia::fitness::ScoreError;
+use xu::agent::Agent;
+use xu::manager::create_manager;
+use xu::fitness::ScoreError;
 ```
 
 In the above code, we import a function to create a default Manager object, which will run the genetic algorithm system. We import Agent so that we can investigate the 'fittest' set of genes after running. We also import ScoreError for use when defining our fitness function.
@@ -90,5 +88,5 @@ Have a look in the examples directory of this library. The example described abo
 
 ## License
 
-Aristeia is licensed under the Apache License, Version 2.0.
+Xu is licensed under the Apache License, Version 2.0.
 
